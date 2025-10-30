@@ -20,12 +20,12 @@ export function Header() {
   };
 
   return (
-    <header className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between px-6">
+    <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-sm flex items-center justify-between px-6 dark:border-slate-800 dark:bg-slate-900/50">
       <div>
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
           Welcome back, {user?.name || 'Admin'}
         </h2>
-        <p className="text-sm text-slate-400">Manage your billiard business</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Manage your billiard business</p>
       </div>
 
       <div className="flex items-center gap-2">
@@ -33,7 +33,7 @@ export function Header() {
           variant="ghost"
           size="icon"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="text-slate-400 hover:text-white"
+          className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
@@ -41,7 +41,7 @@ export function Header() {
         <Button
           variant="ghost"
           size="icon"
-          className="text-slate-400 hover:text-white relative"
+          className="relative text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
           onClick={() => router.push('/admin/notifications')}
         >
           <Bell className="h-5 w-5" />
@@ -59,7 +59,7 @@ export function Header() {
           variant="ghost"
           size="icon"
           onClick={handleLogout}
-          className="text-slate-400 hover:text-white"
+          className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <LogOut className="h-5 w-5" />
         </Button>

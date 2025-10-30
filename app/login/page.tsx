@@ -32,23 +32,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-4">
-      <Card className="w-full max-w-md border-emerald-900/20 bg-slate-900/90 backdrop-blur">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-white to-emerald-50 px-4 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950">
+      <Card className="w-full max-w-md border-emerald-300/50 bg-white/90 backdrop-blur dark:border-emerald-900/20 dark:bg-slate-900/90">
         <CardHeader className="space-y-2 text-center">
           <div className="flex justify-center mb-2">
             <div className="bg-emerald-500/10 p-3 rounded-full">
               <CircleDot className="h-8 w-8 text-emerald-500" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold text-white">CueMaster</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">CueMaster</CardTitle>
+          <CardDescription className="text-slate-600 dark:text-slate-400">
             Sign in to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-200">Email</Label>
+              <Label htmlFor="email" className="text-slate-700 dark:text-slate-200">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -56,11 +56,11 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-200">Password</Label>
+              <Label htmlFor="password" className="text-slate-700 dark:text-slate-200">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -68,16 +68,16 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role" className="text-slate-200">Role</Label>
+              <Label htmlFor="role" className="text-slate-700 dark:text-slate-200">Role</Label>
               <Select value={role} onValueChange={setRole}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
+                <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="staff">Staff</SelectItem>
                   <SelectItem value="customer">Customer</SelectItem>
@@ -91,7 +91,7 @@ export default function LoginPage() {
               Sign In
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-slate-400">
+          <div className="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">
             Don't have an account?{' '}
             <Link href="/register" className="text-emerald-500 hover:text-emerald-400">
               Register

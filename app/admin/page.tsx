@@ -43,78 +43,78 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
-        <p className="text-slate-400">Overview of your billiard business</p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Dashboard</h1>
+        <p className="text-slate-600 dark:text-slate-400">Overview of your billiard business</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
               Today's Revenue
             </CardTitle>
             <DollarSign className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">
               {todayRevenue.toLocaleString()}đ
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">
               <span className="text-emerald-500">+12.5%</span> from yesterday
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
               Active Tables
             </CardTitle>
             <Square className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">
               {activeTables} / {tables.length}
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">
               {Math.round((activeTables / tables.length) * 100)}% occupied
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
               Today's Bookings
             </CardTitle>
             <Calendar className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{todayBookings}</div>
-            <p className="text-xs text-slate-500 mt-1">
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">{todayBookings}</div>
+            <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">
               <span className="text-blue-500">+3</span> new bookings
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
               Growth
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">+18.2%</div>
-            <p className="text-xs text-slate-500 mt-1">vs last week</p>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">+18.2%</div>
+            <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">vs last week</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader>
-            <CardTitle className="text-white">Revenue Trend</CardTitle>
+            <CardTitle className="text-slate-900 dark:text-white">Revenue Trend</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -148,9 +148,9 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader>
-            <CardTitle className="text-white">Top Tables Usage</CardTitle>
+            <CardTitle className="text-slate-900 dark:text-white">Top Tables Usage</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -179,11 +179,11 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="dark:border-slate-800 dark:bg-slate-900">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
             Table Floor Map
-            <span className="text-xs font-normal text-slate-400">
+            <span className="text-xs font-normal text-slate-600 dark:text-slate-400">
               (Live updates every 5s)
             </span>
           </CardTitle>
@@ -202,14 +202,14 @@ export default function AdminDashboard() {
                 )}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-white">{table.name}</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{table.name}</span>
                   <div className={cn('h-3 w-3 rounded-full', statusColors[table.status])} />
                 </div>
-                <div className="text-xs text-slate-400 mb-1">{table.type}</div>
-                <div className="text-sm font-medium text-white">
+                <div className="text-xs text-slate-600 mb-1 dark:text-slate-400">{table.type}</div>
+                <div className="text-sm font-medium text-slate-900 dark:text-white">
                   {table.pricePerHour.toLocaleString()}đ/h
                 </div>
-                <div className="text-xs text-slate-500 mt-2 capitalize">
+                <div className="text-xs text-slate-500 mt-2 capitalize dark:text-slate-400">
                   {statusLabels[table.status]}
                 </div>
               </div>

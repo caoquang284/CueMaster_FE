@@ -71,7 +71,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <PublicHeader />
 
       <section className="relative py-20 overflow-hidden">
@@ -82,13 +82,13 @@ export default function Home() {
               <Sparkles className="h-3 w-3 mr-1" />
               Premium Billiard Experience
             </Badge>
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+            <h1 className="text-5xl md:text-7xl font-bold text-slate-900 mb-6 leading-tight dark:text-white">
               Welcome to
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-500">
                 CueMaster
               </span>
             </h1>
-            <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto dark:text-slate-300">
               Experience world-class billiard facilities with professional equipment, comfortable environment, and exceptional service
             </p>
             <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
@@ -98,7 +98,7 @@ export default function Home() {
                   Book a Table Now
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-slate-900 border-slate-800 text-white">
+              <DialogContent className="dark:border-slate-800 dark:bg-slate-900 dark:text-white">
                 <DialogHeader>
                   <DialogTitle>Reserve Your Table</DialogTitle>
                 </DialogHeader>
@@ -108,7 +108,7 @@ export default function Home() {
                     <Input
                       value={bookingForm.name}
                       onChange={(e) => setBookingForm({ ...bookingForm, name: e.target.value })}
-                      className="bg-slate-800 border-slate-700"
+                      className="dark:border-slate-700 dark:bg-slate-800"
                       placeholder="John Doe"
                     />
                   </div>
@@ -117,17 +117,17 @@ export default function Home() {
                     <Input
                       value={bookingForm.phone}
                       onChange={(e) => setBookingForm({ ...bookingForm, phone: e.target.value })}
-                      className="bg-slate-800 border-slate-700"
+                      className="dark:border-slate-700 dark:bg-slate-800"
                       placeholder="+84 123 456 789"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Table Type</Label>
                     <Select value={bookingForm.tableType} onValueChange={(value) => setBookingForm({ ...bookingForm, tableType: value })}>
-                      <SelectTrigger className="bg-slate-800 border-slate-700">
+                      <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800">
                         <SelectValue placeholder="Select table type" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-700">
+                      <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
                         <SelectItem value="Pool">Pool Table</SelectItem>
                         <SelectItem value="Snooker">Snooker Table</SelectItem>
                         <SelectItem value="Carom">Carom Table</SelectItem>
@@ -141,7 +141,7 @@ export default function Home() {
                         type="date"
                         value={bookingForm.date}
                         onChange={(e) => setBookingForm({ ...bookingForm, date: e.target.value })}
-                        className="bg-slate-800 border-slate-700"
+                        className="dark:border-slate-700 dark:bg-slate-800"
                       />
                     </div>
                     <div className="space-y-2">
@@ -150,13 +150,17 @@ export default function Home() {
                         type="time"
                         value={bookingForm.time}
                         onChange={(e) => setBookingForm({ ...bookingForm, time: e.target.value })}
-                        className="bg-slate-800 border-slate-700"
+                        className="dark:border-slate-700 dark:bg-slate-800"
                       />
                     </div>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsBookingOpen(false)} className="border-slate-700">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsBookingOpen(false)}
+                    className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                  >
                     Cancel
                   </Button>
                   <Button onClick={handleBooking} className="bg-emerald-600 hover:bg-emerald-700">
@@ -169,11 +173,11 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="tables" className="py-16 bg-slate-900/50">
+      <section id="tables" className="py-16 bg-slate-100 dark:bg-slate-900/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-white mb-4">Available Tables</h2>
-            <p className="text-slate-400">Real-time table availability - updates every 5 seconds</p>
+            <h2 className="text-4xl font-bold text-slate-900 mb-4 dark:text-white">Available Tables</h2>
+            <p className="text-slate-600 dark:text-slate-400">Real-time table availability - updates every 5 seconds</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
@@ -190,14 +194,14 @@ export default function Home() {
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-white">{table.name}</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">{table.name}</h3>
                     <div className={cn('h-3 w-3 rounded-full', statusColors[table.status])} />
                   </div>
-                  <div className="text-sm text-slate-400 mb-2">{table.type}</div>
+                  <div className="text-sm text-slate-600 mb-2 dark:text-slate-400">{table.type}</div>
                   <div className="text-lg font-bold text-emerald-500">
                     {table.pricePerHour.toLocaleString()}đ/h
                   </div>
-                  <div className="text-xs text-slate-500 mt-2 capitalize">
+                  <div className="text-xs text-slate-500 mt-2 capitalize dark:text-slate-400">
                     {table.status}
                   </div>
                 </CardContent>
@@ -206,17 +210,17 @@ export default function Home() {
           </div>
 
           <div className="flex justify-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 shadow-sm dark:bg-slate-800">
               <div className="h-3 w-3 rounded-full bg-emerald-500" />
-              <span className="text-sm text-slate-300">Available ({availableTables.length})</span>
+              <span className="text-sm text-slate-600 dark:text-slate-300">Available ({availableTables.length})</span>
             </div>
-            <div className="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 shadow-sm dark:bg-slate-800">
               <div className="h-3 w-3 rounded-full bg-orange-500" />
-              <span className="text-sm text-slate-300">Occupied</span>
+              <span className="text-sm text-slate-600 dark:text-slate-300">Occupied</span>
             </div>
-            <div className="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 shadow-sm dark:bg-slate-800">
               <div className="h-3 w-3 rounded-full bg-blue-500" />
-              <span className="text-sm text-slate-300">Reserved</span>
+              <span className="text-sm text-slate-600 dark:text-slate-300">Reserved</span>
             </div>
           </div>
         </div>
@@ -225,13 +229,16 @@ export default function Home() {
       <section id="menu" className="py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-white mb-4">Food & Beverages</h2>
-            <p className="text-slate-400">Enjoy delicious food and drinks while you play</p>
+            <h2 className="text-4xl font-bold text-slate-900 mb-4 dark:text-white">Food & Beverages</h2>
+            <p className="text-slate-600 dark:text-slate-400">Enjoy delicious food and drinks while you play</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {mockMenuItems.slice(0, 8).map((item) => (
-              <Card key={item.id} className="bg-slate-900 border-slate-800 hover:border-emerald-500/30 transition-all duration-300 overflow-hidden">
+              <Card
+                key={item.id}
+                className="overflow-hidden transition-all duration-300 hover:border-emerald-500/30 dark:border-slate-800 dark:bg-slate-900"
+              >
                 <div className="relative h-48 w-full">
                   <Image
                     src={item.image}
@@ -244,8 +251,8 @@ export default function Home() {
                   </Badge>
                 </div>
                 <CardContent className="p-4">
-                  <h3 className="font-semibold text-white mb-2">{item.name}</h3>
-                  <p className="text-sm text-slate-400 mb-3 line-clamp-2">{item.description}</p>
+                  <h3 className="font-semibold text-slate-900 mb-2 dark:text-white">{item.name}</h3>
+                  <p className="text-sm text-slate-600 mb-3 line-clamp-2 dark:text-slate-400">{item.description}</p>
                   <div className="flex items-center justify-between">
                     <span className="text-xl font-bold text-emerald-500">
                       {item.price.toLocaleString()}đ
@@ -261,16 +268,16 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="bookings" className="py-16 bg-slate-900/50">
+      <section id="bookings" className="py-16 bg-slate-100 dark:bg-slate-900/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-white mb-4">My Bookings</h2>
-            <p className="text-slate-400">Track your upcoming reservations</p>
+            <h2 className="text-4xl font-bold text-slate-900 mb-4 dark:text-white">My Bookings</h2>
+            <p className="text-slate-600 dark:text-slate-400">Track your upcoming reservations</p>
           </div>
 
           <div className="max-w-4xl mx-auto space-y-4">
             {mockBookings.filter(b => b.customerId === 'c1' || b.customerId === 'c2').map((booking) => (
-              <Card key={booking.id} className="bg-slate-900 border-slate-800">
+              <Card key={booking.id} className="dark:border-slate-800 dark:bg-slate-900">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-6">
@@ -278,8 +285,8 @@ export default function Home() {
                         <CircleDot className="h-8 w-8 text-emerald-500" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white text-lg mb-1">{booking.tableName}</h3>
-                        <div className="flex items-center gap-4 text-sm text-slate-400">
+                        <h3 className="font-semibold text-slate-900 text-lg mb-1 dark:text-white">{booking.tableName}</h3>
+                        <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
                           <span className="flex items-center gap-1">
                             <CalendarDays className="h-4 w-4" />
                             {new Date(booking.startTime).toLocaleDateString()}
@@ -292,7 +299,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-white mb-1">
+                      <div className="text-2xl font-bold text-slate-900 mb-1 dark:text-white">
                         {booking.totalPrice.toLocaleString()}đ
                       </div>
                       <Badge className={cn(

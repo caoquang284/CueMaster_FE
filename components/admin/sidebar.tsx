@@ -30,15 +30,15 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
-      <div className="p-6 border-b border-slate-800">
+    <aside className="w-64 border-r border-slate-200 bg-white flex flex-col dark:border-slate-800 dark:bg-slate-900">
+      <div className="border-b border-slate-200 p-6 dark:border-slate-800">
         <div className="flex items-center gap-3">
           <div className="bg-emerald-500/10 p-2 rounded-lg">
             <CircleDot className="h-6 w-6 text-emerald-500" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">CueMaster</h1>
-            <p className="text-xs text-slate-400">Management Portal</p>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">CueMaster</h1>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Management Portal</p>
           </div>
         </div>
       </div>
@@ -56,8 +56,8 @@ export function Sidebar() {
                   className={cn(
                     'flex items-center gap-3 px-4 py-3 rounded-lg transition-all',
                     isActive
-                      ? 'bg-emerald-500/10 text-emerald-500'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
                   )}
                 >
                   <Icon className="h-5 w-5" />

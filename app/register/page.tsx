@@ -39,23 +39,23 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-4">
-      <Card className="w-full max-w-md border-emerald-900/20 bg-slate-900/90 backdrop-blur">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-white to-emerald-50 px-4 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950">
+      <Card className="w-full max-w-md border-emerald-300/50 bg-white/90 backdrop-blur dark:border-emerald-900/20 dark:bg-slate-900/90">
         <CardHeader className="space-y-2 text-center">
           <div className="flex justify-center mb-2">
             <div className="bg-emerald-500/10 p-3 rounded-full">
               <CircleDot className="h-8 w-8 text-emerald-500" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold text-white">Create Account</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">Create Account</CardTitle>
+          <CardDescription className="text-slate-600 dark:text-slate-400">
             Join CueMaster today
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-slate-200">Full Name</Label>
+              <Label htmlFor="name" className="text-slate-700 dark:text-slate-200">Full Name</Label>
               <Input
                 id="name"
                 type="text"
@@ -63,11 +63,11 @@ export default function RegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-200">Email</Label>
+              <Label htmlFor="email" className="text-slate-700 dark:text-slate-200">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -75,11 +75,11 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-200">Password</Label>
+              <Label htmlFor="password" className="text-slate-700 dark:text-slate-200">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -87,11 +87,11 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-slate-200">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-slate-700 dark:text-slate-200">Confirm Password</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -99,7 +99,7 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
             <Button
@@ -109,7 +109,7 @@ export default function RegisterPage() {
               Create Account
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-slate-400">
+          <div className="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">
             Already have an account?{' '}
             <Link href="/login" className="text-emerald-500 hover:text-emerald-400">
               Sign In

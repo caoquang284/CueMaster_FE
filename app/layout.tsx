@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'CueMaster - Billiard Management System',
   description: 'Premium billiard facilities management and booking system',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
