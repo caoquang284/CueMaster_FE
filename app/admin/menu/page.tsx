@@ -110,8 +110,8 @@ export default function MenuPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Menu Management</h1>
-          <p className="text-slate-400">Manage food, drinks, and services</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Menu Management</h1>
+          <p className="text-slate-600 dark:text-slate-400">Manage food, drinks, and services</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -120,7 +120,7 @@ export default function MenuPage() {
               Add Item
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-md">
+          <DialogContent className="max-w-md dark:border-slate-800 dark:bg-slate-900 dark:text-white">
             <DialogHeader>
               <DialogTitle>{editingItem ? 'Edit Item' : 'Add New Item'}</DialogTitle>
             </DialogHeader>
@@ -130,16 +130,16 @@ export default function MenuPage() {
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-slate-800 border-slate-700"
+                  className="dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value as MenuCategory })}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700">
+                  <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
                     <SelectItem value="Food">Food</SelectItem>
                     <SelectItem value="Drink">Drink</SelectItem>
                     <SelectItem value="Service">Service</SelectItem>
@@ -153,7 +153,7 @@ export default function MenuPage() {
                     type="number"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="bg-slate-800 border-slate-700"
+                    className="dark:border-slate-700 dark:bg-slate-800"
                   />
                 </div>
                 <div className="space-y-2">
@@ -162,7 +162,7 @@ export default function MenuPage() {
                     type="number"
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    className="bg-slate-800 border-slate-700"
+                    className="dark:border-slate-700 dark:bg-slate-800"
                   />
                 </div>
               </div>
@@ -171,7 +171,7 @@ export default function MenuPage() {
                 <Textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="bg-slate-800 border-slate-700"
+                  className="dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
               <div className="space-y-2">
@@ -180,12 +180,16 @@ export default function MenuPage() {
                   value={formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                   placeholder="https://..."
-                  className="bg-slate-800 border-slate-700"
+                  className="dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-slate-700">
+              <Button
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"
+              >
                 Cancel
               </Button>
               <Button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700">
@@ -196,10 +200,10 @@ export default function MenuPage() {
         </Dialog>
       </div>
 
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="dark:border-slate-800 dark:bg-slate-900">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <CardTitle className="text-white">Menu Items</CardTitle>
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <CardTitle className="text-slate-900 dark:text-white">Menu Items</CardTitle>
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -207,14 +211,14 @@ export default function MenuPage() {
                   placeholder="Search items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-slate-800 border-slate-700 text-white w-full sm:w-64"
+                  className="pl-10 w-full sm:w-64 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
               <Select value={filterCategory} onValueChange={(value) => setFilterCategory(value as any)}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white w-full sm:w-40">
+                <SelectTrigger className="w-full sm:w-40 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
+                <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
                   <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="Food">Food</SelectItem>
                   <SelectItem value="Drink">Drink</SelectItem>
@@ -229,9 +233,9 @@ export default function MenuPage() {
             {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className="bg-slate-800 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300 border border-slate-700"
+                className="rounded-lg border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-lg dark:border-slate-700 dark:bg-slate-800"
               >
-                <div className="relative h-40 w-full bg-slate-700">
+                <div className="relative h-40 w-full bg-slate-200 dark:bg-slate-700">
                   <Image
                     src={item.image}
                     alt={item.name}
@@ -241,16 +245,16 @@ export default function MenuPage() {
                 </div>
                 <div className="p-4 space-y-3">
                   <div>
-                    <h3 className="font-semibold text-white mb-1">{item.name}</h3>
-                    <p className="text-xs text-slate-400">{item.category}</p>
+                    <h3 className="mb-1 font-semibold text-slate-900 dark:text-white">{item.name}</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{item.category}</p>
                   </div>
-                  <p className="text-sm text-slate-300 line-clamp-2">{item.description}</p>
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-700">
+                  <p className="text-sm text-slate-600 line-clamp-2 dark:text-slate-300">{item.description}</p>
+                  <div className="flex items-center justify-between border-t border-slate-200 pt-2 dark:border-slate-700">
                     <div>
                       <div className="text-lg font-bold text-emerald-500">
                         {item.price.toLocaleString()}đ
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-slate-600 dark:text-slate-400">
                         Stock: {item.stock}
                       </div>
                     </div>
@@ -278,7 +282,7 @@ export default function MenuPage() {
             ))}
           </div>
           {filteredItems.length === 0 && (
-            <div className="text-center py-12 text-slate-400">
+            <div className="py-12 text-center text-slate-600 dark:text-slate-400">
               No items found
             </div>
           )}

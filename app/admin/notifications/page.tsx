@@ -37,7 +37,7 @@ export default function NotificationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+          <h1 className="mb-2 flex items-center gap-3 text-3xl font-bold text-slate-900 dark:text-white">
             <Bell className="h-8 w-8" />
             Notifications
             {unreadCount > 0 && (
@@ -46,13 +46,13 @@ export default function NotificationsPage() {
               </Badge>
             )}
           </h1>
-          <p className="text-slate-400">Stay updated with system events</p>
+          <p className="text-slate-600 dark:text-slate-400">Stay updated with system events</p>
         </div>
         {unreadCount > 0 && (
           <Button
             onClick={markAllNotificationsRead}
             variant="outline"
-            className="border-emerald-700 text-emerald-500 hover:bg-emerald-500/10"
+            className="border-emerald-300 text-emerald-600 hover:bg-emerald-500/10 dark:border-emerald-700 dark:text-emerald-500"
           >
             <CheckCheck className="h-4 w-4 mr-2" />
             Mark All as Read
@@ -62,8 +62,8 @@ export default function NotificationsPage() {
 
       <div className="space-y-3">
         {notifications.length === 0 ? (
-          <Card className="bg-slate-900 border-slate-800">
-            <CardContent className="py-12 text-center text-slate-400">
+          <Card className="dark:border-slate-800 dark:bg-slate-900">
+            <CardContent className="py-12 text-center text-slate-600 dark:text-slate-400">
               <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No notifications yet</p>
             </CardContent>
@@ -75,9 +75,9 @@ export default function NotificationsPage() {
               <Card
                 key={notification.id}
                 className={cn(
-                  'bg-slate-900 border-l-4 transition-all duration-300 hover:shadow-lg',
+                  'border-l-4 bg-white transition-all duration-300 hover:shadow-lg dark:bg-slate-900',
                   typeBorderColors[notification.type],
-                  !notification.read ? 'border-slate-700' : 'border-slate-800 opacity-60'
+                  !notification.read ? 'border-slate-200 dark:border-slate-700' : 'border-slate-200 opacity-60 dark:border-slate-800'
                 )}
               >
                 <CardContent className="p-4">
@@ -88,24 +88,32 @@ export default function NotificationsPage() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4 mb-1">
-                        <h3 className={cn(
-                          'font-semibold',
-                          notification.read ? 'text-slate-400' : 'text-white'
-                        )}>
+                        <h3
+                          className={cn(
+                            'font-semibold',
+                            notification.read
+                              ? 'text-slate-500 dark:text-slate-400'
+                              : 'text-slate-900 dark:text-white'
+                          )}
+                        >
                           {notification.title}
                         </h3>
                         {!notification.read && (
                           <div className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0 mt-2" />
                         )}
                       </div>
-                      <p className={cn(
-                        'text-sm mb-2',
-                        notification.read ? 'text-slate-500' : 'text-slate-300'
-                      )}>
+                      <p
+                        className={cn(
+                          'mb-2 text-sm',
+                          notification.read
+                            ? 'text-slate-500 dark:text-slate-400'
+                            : 'text-slate-600 dark:text-slate-300'
+                        )}
+                      >
                         {notification.message}
                       </p>
                       <div className="flex items-center gap-4">
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
                           {new Date(notification.createdAt).toLocaleString()}
                         </span>
                         {!notification.read && (
@@ -128,35 +136,35 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="dark:border-slate-800 dark:bg-slate-900">
         <CardHeader>
-          <CardTitle className="text-white text-sm">Notification Summary</CardTitle>
+          <CardTitle className="text-sm text-slate-900 dark:text-white">Notification Summary</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-slate-800 rounded-lg">
-              <div className="text-2xl font-bold text-white">
+            <div className="rounded-lg bg-slate-100 p-4 text-center dark:bg-slate-800">
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">
                 {notifications.length}
               </div>
-              <div className="text-xs text-slate-400 mt-1">Total</div>
+              <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">Total</div>
             </div>
-            <div className="text-center p-4 bg-slate-800 rounded-lg">
+            <div className="rounded-lg bg-slate-100 p-4 text-center dark:bg-slate-800">
               <div className="text-2xl font-bold text-emerald-500">
                 {unreadCount}
               </div>
-              <div className="text-xs text-slate-400 mt-1">Unread</div>
+              <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">Unread</div>
             </div>
-            <div className="text-center p-4 bg-slate-800 rounded-lg">
+            <div className="rounded-lg bg-slate-100 p-4 text-center dark:bg-slate-800">
               <div className="text-2xl font-bold text-blue-500">
                 {notifications.filter(n => n.type === 'info').length}
               </div>
-              <div className="text-xs text-slate-400 mt-1">Info</div>
+              <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">Info</div>
             </div>
-            <div className="text-center p-4 bg-slate-800 rounded-lg">
+            <div className="rounded-lg bg-slate-100 p-4 text-center dark:bg-slate-800">
               <div className="text-2xl font-bold text-yellow-500">
                 {notifications.filter(n => n.type === 'warning').length}
               </div>
-              <div className="text-xs text-slate-400 mt-1">Warnings</div>
+              <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">Warnings</div>
             </div>
           </div>
         </CardContent>

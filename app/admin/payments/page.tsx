@@ -56,46 +56,46 @@ export default function PaymentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Payments</h1>
-        <p className="text-slate-400">Track all payment transactions</p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Payments</h1>
+        <p className="text-slate-600 dark:text-slate-400">Track all payment transactions</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
-            <div className="text-sm text-slate-400 mb-1">Total Revenue</div>
+            <div className="mb-1 text-sm text-slate-600 dark:text-slate-400">Total Revenue</div>
             <div className="text-3xl font-bold text-emerald-500">
               {totalRevenue.toLocaleString()}đ
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
-            <div className="text-sm text-slate-400 mb-1">Today's Revenue</div>
+            <div className="mb-1 text-sm text-slate-600 dark:text-slate-400">Today's Revenue</div>
             <div className="text-3xl font-bold text-blue-500">
               {todayRevenue.toLocaleString()}đ
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
-            <div className="text-sm text-slate-400 mb-1">Total Transactions</div>
-            <div className="text-3xl font-bold text-white">
+            <div className="mb-1 text-sm text-slate-600 dark:text-slate-400">Total Transactions</div>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white">
               {payments.length}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="dark:border-slate-800 dark:bg-slate-900">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <CardTitle className="text-white">Payment History</CardTitle>
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <CardTitle className="text-slate-900 dark:text-white">Payment History</CardTitle>
             <Select value={filterMethod} onValueChange={(value) => setFilterMethod(value as any)}>
-              <SelectTrigger className="bg-slate-800 border-slate-700 text-white w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
                 <SelectItem value="all">All Methods</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
                 <SelectItem value="momo">MoMo</SelectItem>
@@ -108,28 +108,31 @@ export default function PaymentsPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="border-slate-800 hover:bg-slate-800/50">
-                <TableHead className="text-slate-400">Payment ID</TableHead>
-                <TableHead className="text-slate-400">Table</TableHead>
-                <TableHead className="text-slate-400">Amount</TableHead>
-                <TableHead className="text-slate-400">Method</TableHead>
-                <TableHead className="text-slate-400">Status</TableHead>
-                <TableHead className="text-slate-400">Date & Time</TableHead>
-                <TableHead className="text-slate-400">Actions</TableHead>
+              <TableRow className="border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50">
+                <TableHead className="text-slate-600 dark:text-slate-400">Payment ID</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Table</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Amount</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Method</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Status</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Date & Time</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPayments.map((payment) => (
-                <TableRow key={payment.id} className="border-slate-800 hover:bg-slate-800/50">
-                  <TableCell className="text-white font-mono text-sm">
+                <TableRow
+                  key={payment.id}
+                  className="border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                >
+                  <TableCell className="font-mono text-sm text-slate-900 dark:text-white">
                     #{payment.id.substring(0, 8)}
                   </TableCell>
-                  <TableCell className="text-slate-300">{payment.tableName}</TableCell>
-                  <TableCell className="text-white font-medium">
+                  <TableCell className="text-slate-600 dark:text-slate-300">{payment.tableName}</TableCell>
+                  <TableCell className="font-medium text-slate-900 dark:text-white">
                     {payment.totalAmount.toLocaleString()}đ
                   </TableCell>
                   <TableCell>
-                    <span className="flex items-center gap-2 text-slate-300">
+                    <span className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                       <span>{methodIcons[payment.method]}</span>
                       <span className="capitalize">{payment.method}</span>
                     </span>
@@ -142,7 +145,7 @@ export default function PaymentsPage() {
                       {payment.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-slate-300 text-sm">
+                  <TableCell className="text-sm text-slate-600 dark:text-slate-300">
                     {new Date(payment.createdAt).toLocaleString()}
                   </TableCell>
                   <TableCell>
@@ -161,7 +164,7 @@ export default function PaymentsPage() {
             </TableBody>
           </Table>
           {filteredPayments.length === 0 && (
-            <div className="text-center py-12 text-slate-400">
+            <div className="py-12 text-center text-slate-600 dark:text-slate-400">
               No payments found
             </div>
           )}
@@ -169,49 +172,49 @@ export default function PaymentsPage() {
       </Card>
 
       <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
+        <DialogContent className="max-w-lg dark:border-slate-800 dark:bg-slate-900 dark:text-white">
           <DialogHeader>
             <DialogTitle>Payment Invoice</DialogTitle>
           </DialogHeader>
           {selectedPayment && (
             <div className="space-y-6 py-4">
-              <div className="text-center pb-4 border-b border-slate-800">
-                <h2 className="text-2xl font-bold text-white mb-1">CueMaster</h2>
-                <p className="text-sm text-slate-400">Billiard Management System</p>
+              <div className="border-b border-slate-200 pb-4 text-center dark:border-slate-800">
+                <h2 className="mb-1 text-2xl font-bold text-slate-900 dark:text-white">CueMaster</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Billiard Management System</p>
               </div>
 
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Invoice ID:</span>
-                  <span className="font-mono text-white">#{selectedPayment.id}</span>
+                  <span className="text-slate-600 dark:text-slate-400">Invoice ID:</span>
+                  <span className="font-mono text-slate-900 dark:text-white">#{selectedPayment.id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Table:</span>
-                  <span className="text-white">{selectedPayment.tableName}</span>
+                  <span className="text-slate-600 dark:text-slate-400">Table:</span>
+                  <span className="text-slate-900 dark:text-white">{selectedPayment.tableName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Payment Method:</span>
-                  <span className="text-white capitalize">
+                  <span className="text-slate-600 dark:text-slate-400">Payment Method:</span>
+                  <span className="capitalize text-slate-900 dark:text-white">
                     {methodIcons[selectedPayment.method as PaymentMethod]} {selectedPayment.method}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Status:</span>
+                  <span className="text-slate-600 dark:text-slate-400">Status:</span>
                   <Badge className={statusColors[selectedPayment.status as PaymentStatus]}>
                     {selectedPayment.status}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Date:</span>
-                  <span className="text-white">
+                  <span className="text-slate-600 dark:text-slate-400">Date:</span>
+                  <span className="text-slate-900 dark:text-white">
                     {new Date(selectedPayment.createdAt).toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-800">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg text-slate-400">Total Amount:</span>
+              <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-lg text-slate-600 dark:text-slate-400">Total Amount:</span>
                   <span className="text-3xl font-bold text-emerald-500">
                     {selectedPayment.totalAmount.toLocaleString()}đ
                   </span>
@@ -223,7 +226,7 @@ export default function PaymentsPage() {
             <Button
               variant="outline"
               onClick={() => setIsInvoiceOpen(false)}
-              className="border-slate-700"
+              className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"
             >
               Close
             </Button>

@@ -39,8 +39,8 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Reports & Analytics</h1>
-          <p className="text-slate-400">Business insights and performance metrics</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Reports & Analytics</h1>
+          <p className="text-slate-600 dark:text-slate-400">Business insights and performance metrics</p>
         </div>
         <Button onClick={handleExportCSV} className="bg-emerald-600 hover:bg-emerald-700">
           <Download className="h-4 w-4 mr-2" />
@@ -49,9 +49,9 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader>
-            <CardTitle className="text-white">Daily Revenue Trend</CardTitle>
+            <CardTitle className="text-slate-900 dark:text-white">Daily Revenue Trend</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -88,9 +88,9 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader>
-            <CardTitle className="text-white">Top 3 Most Used Tables</CardTitle>
+            <CardTitle className="text-slate-900 dark:text-white">Top 3 Most Used Tables</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -119,9 +119,9 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader>
-            <CardTitle className="text-white">Weekly Booking Trend</CardTitle>
+            <CardTitle className="text-slate-900 dark:text-white">Weekly Booking Trend</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -149,9 +149,9 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader>
-            <CardTitle className="text-white">Table Type Distribution</CardTitle>
+            <CardTitle className="text-slate-900 dark:text-white">Table Type Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -184,35 +184,35 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
-            <div className="text-sm text-slate-400 mb-1">Avg Revenue/Day</div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Avg Revenue/Day</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">
               {(mockDailyRevenue.reduce((sum, d) => sum + d.revenue, 0) / mockDailyRevenue.length).toLocaleString()}đ
             </div>
             <div className="text-xs text-emerald-500 mt-1">+8.5% vs last week</div>
           </CardContent>
         </Card>
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
-            <div className="text-sm text-slate-400 mb-1">Avg Bookings/Day</div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Avg Bookings/Day</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">
               {Math.round(weeklyBookings.reduce((sum, d) => sum + d.bookings, 0) / weeklyBookings.length)}
             </div>
             <div className="text-xs text-blue-500 mt-1">+12% vs last week</div>
           </CardContent>
         </Card>
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
-            <div className="text-sm text-slate-400 mb-1">Peak Day</div>
-            <div className="text-2xl font-bold text-white">Saturday</div>
-            <div className="text-xs text-slate-500 mt-1">35 bookings</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Peak Day</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">Saturday</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">35 bookings</div>
           </CardContent>
         </Card>
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
-            <div className="text-sm text-slate-400 mb-1">Occupancy Rate</div>
-            <div className="text-2xl font-bold text-white">68%</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Occupancy Rate</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">68%</div>
             <div className="text-xs text-emerald-500 mt-1">+5% vs last week</div>
           </CardContent>
         </Card>

@@ -10,7 +10,7 @@ export function PublicFooter() {
           <div>
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-emerald-500/10 p-2 rounded-lg">
-                <CircleDot className="h-6 w-6 text-emerald-500" />
+                <img src="/favicon.png" alt="Logo" className="h-6 w-6" />
               </div>
               <div>
                 <h1 className="text-lg font-bold text-slate-900 dark:text-white">CueMaster</h1>

@@ -14,7 +14,7 @@ export function PublicHeader() {
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-3">
             <div className="bg-emerald-500/10 p-2 rounded-lg">
-              <CircleDot className="h-6 w-6 text-emerald-500" />
+              <img src="/favicon.png" alt="Logo" className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">CueMaster</h1>

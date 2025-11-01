@@ -108,8 +108,8 @@ export default function OrdersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Orders</h1>
-          <p className="text-slate-400">Manage customer orders</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Orders</h1>
+          <p className="text-slate-600 dark:text-slate-400">Manage customer orders</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -118,7 +118,7 @@ export default function OrdersPage() {
               New Order
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl">
+          <DialogContent className="max-w-2xl dark:border-slate-800 dark:bg-slate-900 dark:text-white">
             <DialogHeader>
               <DialogTitle>Create New Order</DialogTitle>
             </DialogHeader>
@@ -126,10 +126,10 @@ export default function OrdersPage() {
               <div className="space-y-2">
                 <Label>Select Booking</Label>
                 <Select value={selectedBooking} onValueChange={setSelectedBooking}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700">
+                  <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800">
                     <SelectValue placeholder="Select a booking" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
                     {activeBookings.map((booking) => (
                       <SelectItem key={booking.id} value={booking.id}>
                         {booking.tableName} - {booking.customerName}
@@ -160,10 +160,10 @@ export default function OrdersPage() {
                         value={item.menuItemId}
                         onValueChange={(value) => handleUpdateOrderItem(index, 'menuItemId', value)}
                       >
-                        <SelectTrigger className="bg-slate-800 border-slate-700">
+                        <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800">
                           <SelectValue placeholder="Select item" />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-800 border-slate-700">
+                        <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
                           {menuItems.map((menuItem) => (
                             <SelectItem key={menuItem.id} value={menuItem.id}>
                               {menuItem.name} - {menuItem.price.toLocaleString()}đ
@@ -178,7 +178,7 @@ export default function OrdersPage() {
                         min="1"
                         value={item.quantity}
                         onChange={(e) => handleUpdateOrderItem(index, 'quantity', parseInt(e.target.value))}
-                        className="bg-slate-800 border-slate-700"
+                        className="dark:border-slate-700 dark:bg-slate-800"
                       />
                     </div>
                     <Button
@@ -194,16 +194,16 @@ export default function OrdersPage() {
                 ))}
 
                 {orderItems.length === 0 && (
-                  <div className="text-center py-4 text-slate-500 text-sm">
+                  <div className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">
                     No items added yet
                   </div>
                 )}
               </div>
 
               {orderItems.length > 0 && (
-                <div className="pt-4 border-t border-slate-800">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Total:</span>
+                <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Total:</span>
                     <span className="text-2xl font-bold text-emerald-500">
                       {calculateTotal().toLocaleString()}đ
                     </span>
@@ -212,7 +212,11 @@ export default function OrdersPage() {
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-slate-700">
+              <Button
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"
+              >
                 Cancel
               </Button>
               <Button onClick={handleCreateOrder} className="bg-emerald-600 hover:bg-emerald-700">
@@ -223,31 +227,34 @@ export default function OrdersPage() {
         </Dialog>
       </div>
 
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="dark:border-slate-800 dark:bg-slate-900">
         <CardHeader>
-          <CardTitle className="text-white">All Orders</CardTitle>
+          <CardTitle className="text-slate-900 dark:text-white">All Orders</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="border-slate-800 hover:bg-slate-800/50">
-                <TableHead className="text-slate-400">Order ID</TableHead>
-                <TableHead className="text-slate-400">Table</TableHead>
-                <TableHead className="text-slate-400">Items</TableHead>
-                <TableHead className="text-slate-400">Total</TableHead>
-                <TableHead className="text-slate-400">Status</TableHead>
-                <TableHead className="text-slate-400">Time</TableHead>
-                <TableHead className="text-slate-400">Actions</TableHead>
+              <TableRow className="border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50">
+                <TableHead className="text-slate-600 dark:text-slate-400">Order ID</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Table</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Items</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Total</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Status</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Time</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {orders.map((order) => (
-                <TableRow key={order.id} className="border-slate-800 hover:bg-slate-800/50">
-                  <TableCell className="text-white font-mono text-sm">
+                <TableRow
+                  key={order.id}
+                  className="border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                >
+                  <TableCell className="font-mono text-sm text-slate-900 dark:text-white">
                     #{order.id.substring(0, 8)}
                   </TableCell>
-                  <TableCell className="text-slate-300">{order.tableName}</TableCell>
-                  <TableCell className="text-slate-300">
+                  <TableCell className="text-slate-600 dark:text-slate-300">{order.tableName}</TableCell>
+                  <TableCell className="text-slate-600 dark:text-slate-300">
                     <div className="space-y-1">
                       {order.items.map((item, i) => (
                         <div key={i} className="text-xs">
@@ -256,7 +263,7 @@ export default function OrdersPage() {
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="text-white font-medium">
+                  <TableCell className="font-medium text-slate-900 dark:text-white">
                     {order.totalPrice.toLocaleString()}đ
                   </TableCell>
                   <TableCell>
@@ -267,7 +274,7 @@ export default function OrdersPage() {
                       {order.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-slate-300 text-sm">
+                  <TableCell className="text-sm text-slate-600 dark:text-slate-300">
                     {new Date(order.createdAt).toLocaleTimeString()}
                   </TableCell>
                   <TableCell>
@@ -286,7 +293,7 @@ export default function OrdersPage() {
             </TableBody>
           </Table>
           {orders.length === 0 && (
-            <div className="text-center py-12 text-slate-400">
+            <div className="py-12 text-center text-slate-600 dark:text-slate-400">
               No orders yet
             </div>
           )}

@@ -104,8 +104,8 @@ export default function BookingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Bookings</h1>
-          <p className="text-slate-400">Manage customer bookings</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Bookings</h1>
+          <p className="text-slate-600 dark:text-slate-400">Manage customer bookings</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -114,7 +114,7 @@ export default function BookingsPage() {
               New Booking
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-slate-800 text-white">
+          <DialogContent className="dark:border-slate-800 dark:bg-slate-900 dark:text-white">
             <DialogHeader>
               <DialogTitle>Create New Booking</DialogTitle>
             </DialogHeader>
@@ -125,16 +125,16 @@ export default function BookingsPage() {
                   value={formData.customerName}
                   onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
                   placeholder="John Doe"
-                  className="bg-slate-800 border-slate-700"
+                  className="dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Table</Label>
                 <Select value={formData.tableId} onValueChange={(value) => setFormData({ ...formData, tableId: value })}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700">
+                  <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                     <SelectValue placeholder="Select a table" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
                     {tables.filter(t => t.status === 'available').map((table) => (
                       <SelectItem key={table.id} value={table.id}>
                         {table.name} - {table.type} ({table.pricePerHour.toLocaleString()}đ/h)
@@ -149,7 +149,7 @@ export default function BookingsPage() {
                   type="datetime-local"
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  className="bg-slate-800 border-slate-700"
+                  className="dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
               <div className="space-y-2">
@@ -158,12 +158,16 @@ export default function BookingsPage() {
                   type="datetime-local"
                   value={formData.endTime}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  className="bg-slate-800 border-slate-700"
+                  className="dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-slate-700">
+              <Button
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"
+              >
                 Cancel
               </Button>
               <Button onClick={handleCreateBooking} className="bg-emerald-600 hover:bg-emerald-700">
@@ -174,35 +178,38 @@ export default function BookingsPage() {
         </Dialog>
       </div>
 
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="dark:border-slate-800 dark:bg-slate-900">
         <CardHeader>
-          <CardTitle className="text-white">All Bookings</CardTitle>
+          <CardTitle className="text-slate-900 dark:text-white">All Bookings</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="border-slate-800 hover:bg-slate-800/50">
-                <TableHead className="text-slate-400">Customer</TableHead>
-                <TableHead className="text-slate-400">Table</TableHead>
-                <TableHead className="text-slate-400">Start Time</TableHead>
-                <TableHead className="text-slate-400">End Time</TableHead>
-                <TableHead className="text-slate-400">Total</TableHead>
-                <TableHead className="text-slate-400">Status</TableHead>
-                <TableHead className="text-slate-400">Actions</TableHead>
+              <TableRow className="border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50">
+                <TableHead className="text-slate-600 dark:text-slate-400">Customer</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Table</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Start Time</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">End Time</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Total</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Status</TableHead>
+                <TableHead className="text-slate-600 dark:text-slate-400">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {bookings.map((booking) => (
-                <TableRow key={booking.id} className="border-slate-800 hover:bg-slate-800/50">
-                  <TableCell className="text-white font-medium">{booking.customerName}</TableCell>
-                  <TableCell className="text-slate-300">{booking.tableName}</TableCell>
-                  <TableCell className="text-slate-300">
+                <TableRow
+                  key={booking.id}
+                  className="border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                >
+                  <TableCell className="font-medium text-slate-900 dark:text-white">{booking.customerName}</TableCell>
+                  <TableCell className="text-slate-600 dark:text-slate-300">{booking.tableName}</TableCell>
+                  <TableCell className="text-slate-600 dark:text-slate-300">
                     {new Date(booking.startTime).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-slate-300">
+                  <TableCell className="text-slate-600 dark:text-slate-300">
                     {new Date(booking.endTime).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-white font-medium">
+                  <TableCell className="font-medium text-slate-900 dark:text-white">
                     {booking.totalPrice.toLocaleString()}đ
                   </TableCell>
                   <TableCell>
