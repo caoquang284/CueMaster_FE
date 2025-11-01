@@ -54,7 +54,7 @@ export default function LoginPage() {
         <CardHeader className="space-y-2 text-center">
           <div className="flex justify-center mb-2">
             <div className="bg-emerald-500/10 p-3 rounded-full">
-              <CircleDot className="h-8 w-8 text-emerald-500" />
+              <img src="/favicon.png" alt="Logo" className="h-8 w-8" />
             </div>
           </div>
           <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">CueMaster</CardTitle>
