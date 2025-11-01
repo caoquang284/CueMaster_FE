@@ -19,7 +19,7 @@ import {
 import { useAppStore } from "@/lib/store";
 import type { User, UserRole, UserStatus } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { MoreVertical, Plus } from "lucide-react";
+import { MoreVertical, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type UserFormState = {
@@ -59,6 +59,7 @@ export default function UsersPage() {
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | UserRole>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -81,14 +82,17 @@ export default function UsersPage() {
 
   const filteredUsers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return users;
-    return users.filter((user) =>
-      [user.name, user.email, user.role, user.phone ?? ""]
-        .join(" ")
-        .toLowerCase()
-        .includes(term)
-    );
-  }, [users, searchTerm]);
+    return users.filter((user) => {
+      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+      const matchesSearch =
+        !term ||
+        [user.name, user.email, user.role, user.phone ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(term);
+      return matchesRole && matchesSearch;
+    });
+  }, [users, searchTerm, roleFilter]);
 
   const openCreateDialog = () => {
     setFormMode("create");
@@ -224,20 +228,41 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>User Management</CardTitle>
-          <div className="flex items-center gap-3">
-            <Input
-              placeholder="Search by name, email, role..."
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="w-64"
-            />
-            <Button onClick={openCreateDialog}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add user
-            </Button>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Users</h1>
+          <p className="text-slate-600 dark:text-slate-400">Manage users and their status</p>
+        </div>
+        <Button onClick={openCreateDialog} className="bg-emerald-600 hover:bg-emerald-700 self-start md:self-auto">
+          <Plus className="mr-2 h-4 w-4" />
+          Add user
+        </Button>
+      </div>
+
+      <Card className="dark:border-slate-800 dark:bg-slate-900">
+        <CardHeader className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <CardTitle className="whitespace-nowrap">All Users</CardTitle>
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="w-full pl-10 sm:w-64 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+              />
+            </div>
+            <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as "all" | UserRole)}>
+              <SelectTrigger className="w-full sm:w-40 dark:border-slate-800 dark:bg-slate-900 dark:text-white">
+                <SelectValue placeholder="All Users" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Users</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="staff">Staff</SelectItem>
+                <SelectItem value="customer">Customer</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -256,7 +281,10 @@ export default function UsersPage() {
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {filteredUsers.map((user) => (
-                  <tr key={user.id} className="bg-white dark:bg-slate-900/40">
+                  <tr
+                    key={user.id}
+                    className="transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                  >
                     <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{user.name}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{user.email}</td>
                     <td className="px-4 py-3">
