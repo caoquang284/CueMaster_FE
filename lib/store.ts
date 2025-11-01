@@ -34,6 +34,9 @@ interface AppState {
   updateTableStatus: (tableId: string, status: TableStatus) => void;
   addBooking: (booking: Omit<Booking, 'id'>) => void;
   updateBooking: (id: string, updates: Partial<Booking>) => void;
+  updateUserProfile: (updates: Pick<User, 'name' | 'phone' | 'bio'>) => void;
+  updateUserAvatar: (avatarUrl: string | undefined) => void;
+  updateUserPassword: (currentPassword: string, newPassword: string) => boolean;
 
   addMenuItem: (item: Omit<MenuItem, 'id'>) => void;
   updateMenuItem: (id: string, updates: Partial<MenuItem>) => void;
@@ -51,7 +54,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       tables: mockTables,
       bookings: mockBookings,
@@ -66,6 +69,10 @@ export const useAppStore = create<AppState>()(
           email,
           name: email.split('@')[0],
           role: role as any,
+          phone: '',
+          bio: '',
+          avatarUrl: undefined,
+          password: 'password123',
         };
         set({ user });
         return true;
@@ -94,6 +101,22 @@ export const useAppStore = create<AppState>()(
             b.id === id ? { ...b, ...updates } : b
           ),
         })),
+
+      updateUserProfile: (updates) =>
+        set((state) => (state.user ? { user: { ...state.user, ...updates } } : state)),
+
+      updateUserAvatar: (avatarUrl) =>
+        set((state) => (state.user ? { user: { ...state.user, avatarUrl } } : state)),
+
+      updateUserPassword: (currentPassword, newPassword) => {
+        const user = get().user;
+        if (!user) return false;
+        if (user.password && user.password !== currentPassword) {
+          return false;
+        }
+        set({ user: { ...user, password: newPassword } });
+        return true;
+      },
 
       addMenuItem: (item) =>
         set((state) => ({

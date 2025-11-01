@@ -5,6 +5,10 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  avatarUrl?: string;
+  phone?: string;
+  bio?: string;
+  password?: string;
 }
 
 export type TableType = 'Carom' | 'Pool' | 'Snooker';
