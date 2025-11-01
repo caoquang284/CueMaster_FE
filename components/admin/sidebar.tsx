@@ -12,13 +12,24 @@ import {
   CreditCard,
   BarChart3,
   Bell,
-  CircleDot,
+  Users,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { useAppStore } from '@/lib/store';
+import type { UserRole } from '@/lib/types';
 
-const menuItems = [
+type SidebarItem = {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  roles?: UserRole[];
+};
+
+const menuItems: SidebarItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
   { icon: Square, label: 'Tables', href: '/admin/tables' },
   { icon: Calendar, label: 'Bookings', href: '/admin/bookings' },
+  { icon: Users, label: 'Users', href: '/admin/users', roles: ['admin'] },
   { icon: UtensilsCrossed, label: 'Menu', href: '/admin/menu' },
   { icon: ShoppingCart, label: 'Orders', href: '/admin/orders' },
   { icon: CreditCard, label: 'Payments', href: '/admin/payments' },
@@ -28,6 +39,12 @@ const menuItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const userRole = useAppStore(
+    (state) => (state.user?.role ?? 'staff') as UserRole
+  );
+  const filteredMenu = menuItems.filter(
+    (item) => !item.roles || item.roles.includes(userRole)
+  );
 
   return (
     <aside className="w-64 border-r border-slate-200 bg-white flex flex-col dark:border-slate-800 dark:bg-slate-900">
@@ -45,7 +62,7 @@ export function Sidebar() {
 
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
-          {menuItems.map((item) => {
+          {filteredMenu.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
 

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CircleDot } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,17 +18,33 @@ export default function LoginPage() {
   const [role, setRole] = useState('admin');
   const router = useRouter();
   const login = useAppStore((state) => state.login);
+  const { toast } = useToast();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(email, password, role);
+    const result = login(email, password, role);
 
-    if (success) {
+    if (result.success) {
       if (role === 'admin' || role === 'staff') {
         router.push('/admin');
       } else {
         router.push('/');
       }
+      return;
+    }
+
+    if (result.error === 'banned') {
+      toast({
+        title: 'Account banned',
+        description: 'This account has been banned. Please contact the administrator for support.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Login failed',
+        description: 'Invalid email or password. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 

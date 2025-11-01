@@ -12,7 +12,10 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
-  const { user, updateUserProfile, updateUserAvatar, updateUserPassword } = useAppStore();
+  const user = useAppStore((state) => state.user);
+  const updateUserProfile = useAppStore((state) => state.updateUserProfile);
+  const updateUserAvatar = useAppStore((state) => state.updateUserAvatar);
+  const updateUserPassword = useAppStore((state) => state.updateUserPassword);
   const { toast } = useToast();
 
   const [name, setName] = useState(user?.name ?? "");

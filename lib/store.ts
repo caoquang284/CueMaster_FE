@@ -16,11 +16,18 @@ import {
   mockMenuItems,
   mockOrders,
   mockPayments,
-  mockNotifications
+  mockNotifications,
+  mockUsers,
 } from './mock-data';
+
+type CreateUserPayload = Pick<User, 'name' | 'email' | 'role'> &
+  Partial<Pick<User, 'phone' | 'bio' | 'avatarUrl' | 'status'>> & {
+    password?: string;
+  };
 
 interface AppState {
   user: User | null;
+  users: User[];
   tables: Table[];
   bookings: Booking[];
   menuItems: MenuItem[];
@@ -28,7 +35,11 @@ interface AppState {
   payments: Payment[];
   notifications: Notification[];
 
-  login: (email: string, password: string, role: string) => boolean;
+  login: (
+    email: string,
+    password: string,
+    role: string
+  ) => { success: boolean; error?: 'invalid_credentials' | 'banned' };
   logout: () => void;
 
   updateTableStatus: (tableId: string, status: TableStatus) => void;
@@ -37,6 +48,16 @@ interface AppState {
   updateUserProfile: (updates: Pick<User, 'name' | 'phone' | 'bio'>) => void;
   updateUserAvatar: (avatarUrl: string | undefined) => void;
   updateUserPassword: (currentPassword: string, newPassword: string) => boolean;
+
+  addUser: (payload: CreateUserPayload) => {
+    success: boolean;
+    error?: 'duplicate_email';
+    user?: User;
+  };
+  updateUser: (id: string, updates: Partial<User>) => void;
+  deleteUser: (id: string) => void;
+  toggleUserStatus: (id: string) => User['status'] | null;
+  resetUserPasswordByAdmin: (id: string, newPassword: string) => boolean;
 
   addMenuItem: (item: Omit<MenuItem, 'id'>) => void;
   updateMenuItem: (id: string, updates: Partial<MenuItem>) => void;
@@ -56,6 +77,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       user: null,
+      users: mockUsers,
       tables: mockTables,
       bookings: mockBookings,
       menuItems: mockMenuItems,
@@ -64,18 +86,57 @@ export const useAppStore = create<AppState>()(
       notifications: mockNotifications,
 
       login: (email: string, password: string, role: string) => {
-        const user: User = {
+        const normalizedEmail = email.trim().toLowerCase();
+        const state = get();
+        const existing = state.users.find(
+          (u) => u.email.toLowerCase() === normalizedEmail
+        );
+
+        if (existing) {
+          if (existing.status === 'banned') {
+            return { success: false, error: 'banned' as const };
+          }
+
+          const expectedPassword = existing.password ?? 'password123';
+          if (expectedPassword && password !== expectedPassword) {
+            return { success: false, error: 'invalid_credentials' as const };
+          }
+
+          const updatedUser: User = {
+            ...existing,
+            lastLoginAt: new Date().toISOString(),
+          };
+
+          set({
+            user: updatedUser,
+            users: state.users.map((u) =>
+              u.id === existing.id ? updatedUser : u
+            ),
+          });
+
+          return { success: true };
+        }
+
+        const newUser: User = {
           id: Math.random().toString(36).substr(2, 9),
           email,
           name: email.split('@')[0],
           role: role as any,
+          status: 'active',
           phone: '',
           bio: '',
           avatarUrl: undefined,
-          password: 'password123',
+          password: password || 'password123',
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
         };
-        set({ user });
-        return true;
+
+        set({
+          user: newUser,
+          users: [...state.users, newUser],
+        });
+
+        return { success: true };
       },
 
       logout: () => set({ user: null }),
@@ -103,18 +164,139 @@ export const useAppStore = create<AppState>()(
         })),
 
       updateUserProfile: (updates) =>
-        set((state) => (state.user ? { user: { ...state.user, ...updates } } : state)),
+        set((state) => {
+          if (!state.user) return state;
+          const updatedUser = { ...state.user, ...updates };
+          return {
+            user: updatedUser,
+            users: state.users.map((u) =>
+              u.id === state.user!.id ? { ...u, ...updates } : u
+            ),
+          };
+        }),
 
       updateUserAvatar: (avatarUrl) =>
-        set((state) => (state.user ? { user: { ...state.user, avatarUrl } } : state)),
+        set((state) => {
+          if (!state.user) return state;
+          const updatedUser = { ...state.user, avatarUrl };
+          return {
+            user: updatedUser,
+            users: state.users.map((u) =>
+              u.id === state.user!.id ? { ...u, avatarUrl } : u
+            ),
+          };
+        }),
 
       updateUserPassword: (currentPassword, newPassword) => {
-        const user = get().user;
+        const state = get();
+        const user = state.user;
         if (!user) return false;
-        if (user.password && user.password !== currentPassword) {
+        const storedUser = state.users.find((u) => u.id === user.id);
+        const expectedPassword =
+          storedUser?.password ?? user.password ?? 'password123';
+        if (expectedPassword && expectedPassword !== currentPassword) {
           return false;
         }
-        set({ user: { ...user, password: newPassword } });
+        const updatedUser = { ...user, password: newPassword };
+        set({
+          user: updatedUser,
+          users: state.users.map((u) =>
+            u.id === user.id ? { ...u, password: newPassword } : u
+          ),
+        });
+        return true;
+      },
+
+      addUser: (payload) => {
+        const state = get();
+        const normalizedEmail = payload.email.trim().toLowerCase();
+        const duplicate = state.users.some(
+          (u) => u.email.toLowerCase() === normalizedEmail
+        );
+        if (duplicate) {
+          return { success: false, error: 'duplicate_email' as const };
+        }
+        const newUser: User = {
+          id: Math.random().toString(36).substr(2, 9),
+          email: payload.email,
+          name: payload.name,
+          role: payload.role,
+          status: payload.status ?? 'active',
+          phone: payload.phone ?? '',
+          bio: payload.bio ?? '',
+          avatarUrl: payload.avatarUrl,
+          password: payload.password ?? 'password123',
+          createdAt: new Date().toISOString(),
+          lastLoginAt: undefined,
+        };
+        set({
+          users: [...state.users, newUser],
+        });
+        return { success: true, user: newUser };
+      },
+
+      updateUser: (id, updates) =>
+        set((state) => {
+          const updatedUsers = state.users.map((u) =>
+            u.id === id ? { ...u, ...updates } : u
+          );
+          const shouldUpdateCurrent =
+            state.user && state.user.id === id
+              ? { user: { ...state.user, ...updates } }
+              : {};
+          return {
+            users: updatedUsers,
+            ...shouldUpdateCurrent,
+          };
+        }),
+
+      deleteUser: (id) =>
+        set((state) => {
+          const remainingUsers = state.users.filter((u) => u.id !== id);
+          const shouldClearCurrent =
+            state.user && state.user.id === id ? { user: null } : {};
+          return {
+            users: remainingUsers,
+            ...shouldClearCurrent,
+          };
+        }),
+
+      toggleUserStatus: (id) => {
+        const state = get();
+        const target = state.users.find((u) => u.id === id);
+        if (!target) {
+          return null;
+        }
+        const nextStatus: User['status'] =
+          target.status === 'active' ? 'banned' : 'active';
+        set({
+          users: state.users.map((u) =>
+            u.id === id ? { ...u, status: nextStatus } : u
+          ),
+          user:
+            state.user && state.user.id === id
+              ? { ...state.user, status: nextStatus }
+              : state.user,
+        });
+        if (nextStatus === 'banned' && state.user?.id === id) {
+          set({ user: null });
+        }
+        return nextStatus;
+      },
+
+      resetUserPasswordByAdmin: (id, newPassword) => {
+        const state = get();
+        const target = state.users.find((u) => u.id === id);
+        if (!target) return false;
+        set({
+          users: state.users.map((u) =>
+            u.id === id ? { ...u, password: newPassword } : u
+          ),
+          user:
+            state.user && state.user.id === id
+              ? { ...state.user, password: newPassword }
+              : state.user,
+        });
         return true;
       },
 
@@ -195,7 +377,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'cuemaster-storage',
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({ user: state.user, users: state.users }),
     }
   )
 );

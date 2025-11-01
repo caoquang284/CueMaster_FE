@@ -1,4 +1,59 @@
-import { Table, Booking, MenuItem, Order, Payment, Notification, DailyRevenue, TableUsage } from './types';
+import { Table, Booking, MenuItem, Order, Payment, Notification, DailyRevenue, TableUsage, User } from './types';
+
+export const mockUsers: User[] = [
+  {
+    id: 'u-admin',
+    email: 'admin@cuemaster.com',
+    name: 'CueMaster Admin',
+    role: 'admin',
+    status: 'active',
+    phone: '+84 901 234 567',
+    bio: 'System administrator of CueMaster.',
+    avatarUrl: '',
+    password: 'admin123',
+    createdAt: '2025-10-01T08:00:00',
+    lastLoginAt: '2025-10-26T09:30:00',
+  },
+  {
+    id: 'u-staff-1',
+    email: 'staff.le@cuemaster.com',
+    name: 'Lê Minh',
+    role: 'staff',
+    status: 'active',
+    phone: '+84 912 345 678',
+    bio: 'Front-desk staff handling reservations.',
+    avatarUrl: '',
+    password: 'staff123',
+    createdAt: '2025-09-15T10:00:00',
+    lastLoginAt: '2025-10-25T18:45:00',
+  },
+  {
+    id: 'u-staff-2',
+    email: 'staff.tran@cuemaster.com',
+    name: 'Trần Quốc',
+    role: 'staff',
+    status: 'banned',
+    phone: '+84 934 567 890',
+    bio: 'Former staff member.',
+    avatarUrl: '',
+    password: 'staff123',
+    createdAt: '2025-08-20T09:00:00',
+    lastLoginAt: '2025-10-10T13:20:00',
+  },
+  {
+    id: 'u-customer-1',
+    email: 'customer.nguyen@example.com',
+    name: 'Nguyễn Văn A',
+    role: 'customer',
+    status: 'active',
+    phone: '+84 955 555 555',
+    bio: 'Frequent pool player.',
+    avatarUrl: '',
+    password: 'customer123',
+    createdAt: '2025-07-01T11:30:00',
+    lastLoginAt: '2025-10-24T20:00:00',
+  },
+];
 
 export const mockTables: Table[] = [
   { id: '1', name: 'Table 1', type: 'Pool', status: 'available', pricePerHour: 50000 },

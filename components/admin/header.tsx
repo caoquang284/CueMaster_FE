@@ -19,7 +19,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 export function Header() {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const { user, logout, notifications } = useAppStore();
+  const user = useAppStore((state) => state.user);
+  const notifications = useAppStore((state) => state.notifications);
+  const logout = useAppStore((state) => state.logout);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

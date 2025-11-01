@@ -1,14 +1,18 @@
 export type UserRole = 'admin' | 'staff' | 'customer';
+export type UserStatus = 'active' | 'banned';
 
 export interface User {
   id: string;
   email: string;
   name: string;
   role: UserRole;
+  status: UserStatus;
   avatarUrl?: string;
   phone?: string;
   bio?: string;
   password?: string;
+  createdAt?: string;
+  lastLoginAt?: string;
 }
 
 export type TableType = 'Carom' | 'Pool' | 'Snooker';
