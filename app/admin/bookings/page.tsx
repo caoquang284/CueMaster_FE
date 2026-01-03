@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useBookings } from '@/lib/hooks/use-bookings';
+import { useTables } from '@/lib/hooks/use-tables';
+import { bookingsApi } from '@/lib/api/bookings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,24 +12,40 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { BookingStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { PageSkeleton } from '@/components/loaders/page-skeleton';
 
 export default function BookingsPage() {
-  const { bookings, tables, updateBooking, addBooking, addNotification } = useAppStore();
+  const { bookings, isLoading, isError, mutate } = useBookings();
+  const { tables } = useTables();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [actioningId, setActioningId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
-    customerName: '',
+    userId: '',
     tableId: '',
     startTime: '',
     endTime: '',
   });
 
-  const handleCreateBooking = () => {
-    if (!formData.customerName || !formData.tableId || !formData.startTime || !formData.endTime) {
+  if (isLoading) return <PageSkeleton />;
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-red-500 text-lg mb-2">Failed to load bookings</p>
+          <Button onClick={() => mutate()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleCreateBooking = async () => {
+    if (!formData.userId || !formData.tableId || !formData.startTime || !formData.endTime) {
       toast({
         title: 'Error',
         description: 'Please fill all fields',
@@ -36,68 +54,73 @@ export default function BookingsPage() {
       return;
     }
 
-    const selectedTable = tables.find(t => t.id === formData.tableId);
-    if (!selectedTable) return;
-
-    const start = new Date(formData.startTime);
-    const end = new Date(formData.endTime);
-    const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    const totalPrice = hours * selectedTable.pricePerHour;
-
-    addBooking({
-      customerId: 'c' + Math.random().toString(36).substr(2, 9),
-      customerName: formData.customerName,
-      tableId: formData.tableId,
-      tableName: selectedTable.name,
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      status: 'pending',
-      totalPrice,
-    });
-
-    addNotification({
-      title: 'New Booking Created',
-      message: `${formData.customerName} booked ${selectedTable.name}`,
-      type: 'info',
-      read: false,
-    });
-
-    toast({
-      title: 'Success',
-      description: 'Booking created successfully',
-    });
-
-    setFormData({
-      customerName: '',
-      tableId: '',
-      startTime: '',
-      endTime: '',
-    });
-    setIsDialogOpen(false);
+    try {
+      await bookingsApi.create({
+        userId: formData.userId,
+        tableId: formData.tableId,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+      });
+      await mutate();
+      toast({ title: 'Success', description: 'Booking created successfully' });
+      setIsDialogOpen(false);
+      setFormData({ userId: '', tableId: '', startTime: '', endTime: '' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
 
-  const handleConfirmBooking = (bookingId: string) => {
-    updateBooking(bookingId, { status: 'confirmed' });
-    toast({
-      title: 'Success',
-      description: 'Booking confirmed',
-    });
+  const handleConfirm = async (id: string) => {
+    try {
+      setActioningId(id);
+      await bookingsApi.confirm(id);
+      await mutate();
+      toast({ title: 'Success', description: 'Booking confirmed' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setActioningId(null);
+    }
   };
 
-  const handleCancelBooking = (bookingId: string) => {
-    updateBooking(bookingId, { status: 'cancelled' });
-    toast({
-      title: 'Cancelled',
-      description: 'Booking has been cancelled',
-    });
+  const handleCancel = async (id: string) => {
+    try {
+      setActioningId(id);
+      await bookingsApi.cancel(id);
+      await mutate();
+      toast({ title: 'Success', description: 'Booking cancelled' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setActioningId(null);
+    }
   };
 
-  const statusColors: Record<BookingStatus, string> = {
-    pending: 'bg-yellow-500',
-    confirmed: 'bg-blue-500',
-    ongoing: 'bg-emerald-500',
-    completed: 'bg-slate-500',
-    cancelled: 'bg-red-500',
+  const handleComplete = async (id: string) => {
+    try {
+      setActioningId(id);
+      await bookingsApi.complete(id);
+      await mutate();
+      toast({ title: 'Success', description: 'Booking completed' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const getStatusBadge = (status: BookingStatus) => {
+    const config = {
+      PENDING: { variant: 'secondary' as const, label: 'Pending' },
+      CONFIRMED: { variant: 'default' as const, label: 'Confirmed' },
+      CANCELLED: { variant: 'destructive' as const, label: 'Cancelled' },
+      COMPLETED: { variant: 'outline' as const, label: 'Completed' },
+    };
+    return <Badge variant={config[status].variant}>{config[status].label}</Badge>;
+  };
+
+  const formatDateTime = (dateTime: string) => {
+    return new Date(dateTime).toLocaleString('vi-VN');
   };
 
   return (
@@ -105,74 +128,66 @@ export default function BookingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Bookings</h1>
-          <p className="text-slate-600 dark:text-slate-400">Manage customer bookings</p>
+          <p className="text-slate-600 dark:text-slate-400">Manage table bookings</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Button className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
-              New Booking
+              Create Booking
             </Button>
           </DialogTrigger>
-          <DialogContent className="dark:border-slate-800 dark:bg-slate-900 dark:text-white">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Booking</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Customer Name</Label>
+                <Label htmlFor="userId">User ID</Label>
                 <Input
-                  value={formData.customerName}
-                  onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                  placeholder="John Doe"
-                  className="dark:border-slate-700 dark:bg-slate-800"
+                  id="userId"
+                  placeholder="Enter user ID"
+                  value={formData.userId}
+                  onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Table</Label>
+                <Label htmlFor="tableId">Table</Label>
                 <Select value={formData.tableId} onValueChange={(value) => setFormData({ ...formData, tableId: value })}>
-                  <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                    <SelectValue placeholder="Select a table" />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select table" />
                   </SelectTrigger>
-                  <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
-                    {tables.filter(t => t.status === 'available').map((table) => (
+                  <SelectContent>
+                    {(tables || []).map((table) => (
                       <SelectItem key={table.id} value={table.id}>
-                        {table.name} - {table.type} ({table.pricePerHour.toLocaleString()}đ/h)
+                        {table.code} - {table.type} ({table.priceHour.toLocaleString()}đ/h)
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Start Time</Label>
+                <Label htmlFor="startTime">Start Time</Label>
                 <Input
+                  id="startTime"
                   type="datetime-local"
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  className="dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
               <div className="space-y-2">
-                <Label>End Time</Label>
+                <Label htmlFor="endTime">End Time</Label>
                 <Input
+                  id="endTime"
                   type="datetime-local"
                   value={formData.endTime}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  className="dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleCreateBooking} className="bg-emerald-600 hover:bg-emerald-700">
-                Create Booking
-              </Button>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateBooking}>Create</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -185,62 +200,59 @@ export default function BookingsPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50">
-                <TableHead className="text-slate-600 dark:text-slate-400">Customer</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Table</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Start Time</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">End Time</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Total</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Status</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Actions</TableHead>
+              <TableRow>
+                <TableHead>Table</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>Start Time</TableHead>
+                <TableHead>End Time</TableHead>
+                <TableHead>Total Price</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bookings.map((booking) => (
-                <TableRow
-                  key={booking.id}
-                  className="border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50"
-                >
-                  <TableCell className="font-medium text-slate-900 dark:text-white">{booking.customerName}</TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-300">{booking.tableName}</TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-300">
-                    {new Date(booking.startTime).toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-300">
-                    {new Date(booking.endTime).toLocaleString()}
-                  </TableCell>
-                  <TableCell className="font-medium text-slate-900 dark:text-white">
-                    {booking.totalPrice.toLocaleString()}đ
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={`${statusColors[booking.status]} text-white border-0 capitalize`}
-                    >
-                      {booking.status}
-                    </Badge>
-                  </TableCell>
+              {(bookings || []).map((booking) => (
+                <TableRow key={booking.id}>
+                  <TableCell className="font-medium">{booking.table?.code || booking.tableId}</TableCell>
+                  <TableCell>{booking.user?.name || booking.userId}</TableCell>
+                  <TableCell>{formatDateTime(booking.startTime)}</TableCell>
+                  <TableCell>{formatDateTime(booking.endTime)}</TableCell>
+                  <TableCell>{booking.totalPrice.toLocaleString()}đ</TableCell>
+                  <TableCell>{getStatusBadge(booking.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      {booking.status === 'pending' && (
+                      {booking.status === 'PENDING' && (
                         <>
                           <Button
                             size="sm"
-                            variant="ghost"
-                            onClick={() => handleConfirmBooking(booking.id)}
-                            className="text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                            variant="default"
+                            onClick={() => handleConfirm(booking.id)}
+                            disabled={actioningId === booking.id}
                           >
-                            <CheckCircle className="h-4 w-4" />
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Confirm
                           </Button>
                           <Button
                             size="sm"
-                            variant="ghost"
-                            onClick={() => handleCancelBooking(booking.id)}
-                            className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                            variant="destructive"
+                            onClick={() => handleCancel(booking.id)}
+                            disabled={actioningId === booking.id}
                           >
-                            <XCircle className="h-4 w-4" />
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Cancel
                           </Button>
                         </>
+                      )}
+                      {booking.status === 'CONFIRMED' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleComplete(booking.id)}
+                          disabled={actioningId === booking.id}
+                        >
+                          <Clock className="h-4 w-4 mr-1" />
+                          Complete
+                        </Button>
                       )}
                     </div>
                   </TableCell>
@@ -248,8 +260,49 @@ export default function BookingsPage() {
               ))}
             </TableBody>
           </Table>
+
+          {(!bookings || bookings.length === 0) && (
+            <div className="text-center py-12 text-slate-600 dark:text-slate-400">
+              No bookings found
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold text-yellow-500 mb-1">
+              {(bookings || []).filter(b => b.status === 'PENDING').length}
+            </div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">Pending</div>
+          </CardContent>
+        </Card>
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold text-green-500 mb-1">
+              {(bookings || []).filter(b => b.status === 'CONFIRMED').length}
+            </div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">Confirmed</div>
+          </CardContent>
+        </Card>
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold text-blue-500 mb-1">
+              {(bookings || []).filter(b => b.status === 'COMPLETED').length}
+            </div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">Completed</div>
+          </CardContent>
+        </Card>
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold text-red-500 mb-1">
+              {(bookings || []).filter(b => b.status === 'CANCELLED').length}
+            </div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">Cancelled</div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

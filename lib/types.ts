@@ -1,99 +1,119 @@
-export type UserRole = 'admin' | 'staff' | 'customer';
-export type UserStatus = 'active' | 'banned';
+// User types - matching Prisma schema
+export type UserRole = 'ADMIN' | 'STAFF' | 'CUSTOMER';
 
 export interface User {
   id: string;
   email: string;
-  name: string;
-  role: UserRole;
-  status: UserStatus;
-  avatarUrl?: string;
-  phone?: string;
-  bio?: string;
   password?: string;
-  createdAt?: string;
-  lastLoginAt?: string;
+  name: string | null;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type TableType = 'Carom' | 'Pool' | 'Snooker';
-export type TableStatus = 'available' | 'occupied' | 'reserved' | 'maintenance';
+// Table types - matching Prisma schema
+export type TableType = 'CAROM' | 'POOL' | 'SNOOKER';
+export type TableStatus = 'IDLE' | 'PLAYING' | 'RESERVED';
 
 export interface Table {
   id: string;
-  name: string;
+  code: string;
   type: TableType;
   status: TableStatus;
-  pricePerHour: number;
+  priceHour: number;
+  startedAt: string | null;
+  endedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type BookingStatus = 'pending' | 'confirmed' | 'ongoing' | 'completed' | 'cancelled';
+// Booking types - matching Prisma schema
+export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 
 export interface Booking {
   id: string;
-  customerId: string;
-  customerName: string;
+  userId: string;
   tableId: string;
-  tableName: string;
   startTime: string;
   endTime: string;
-  status: BookingStatus;
   totalPrice: number;
+  status: BookingStatus;
+  reminderSent: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user?: User;
+  table?: Table;
 }
 
-export type MenuCategory = 'Food' | 'Drink' | 'Service';
-
+// Menu types - matching Prisma schema
 export interface MenuItem {
   id: string;
   name: string;
-  category: MenuCategory;
+  description: string | null;
   price: number;
-  stock: number;
-  image: string;
-  description: string;
+  category: string;
+  image: string | null;
+  isAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type OrderStatus = 'open' | 'closed';
+// Order types - matching Prisma schema
+export type OrderStatus = 'OPEN' | 'PAID' | 'CANCELLED';
 
 export interface OrderItem {
+  id: string;
+  orderId: string;
   menuItemId: string;
-  menuItemName: string;
   quantity: number;
   price: number;
+  menuItem?: MenuItem;
 }
 
 export interface Order {
   id: string;
-  bookingId: string;
   tableId: string;
-  tableName: string;
-  items: OrderItem[];
-  totalPrice: number;
+  bookingId: string | null;
   status: OrderStatus;
+  total: number;
   createdAt: string;
+  updatedAt: string;
+  table?: Table;
+  booking?: Booking;
+  items?: OrderItem[];
 }
 
-export type PaymentMethod = 'cash' | 'momo' | 'zalopay' | 'card';
-export type PaymentStatus = 'pending' | 'completed' | 'failed';
+// Payment types - matching Prisma schema
+export type PaymentMethod = 'CASH' | 'MOMO';
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED';
 
 export interface Payment {
   id: string;
   orderId: string;
-  bookingId: string;
-  tableId: string;
-  tableName: string;
-  totalAmount: number;
+  tableCost: number;
+  orderCost: number;
+  total: number;
   method: PaymentMethod;
   status: PaymentStatus;
+  paidAt: string | null;
   createdAt: string;
+  order?: Order;
 }
+
+// Notification types - matching Prisma schema
+export type NotificationType = 'BOOKING' | 'ORDER' | 'PAYMENT' | 'TABLE' | 'SYSTEM';
 
 export interface Notification {
   id: string;
+  userId: string;
   title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  read: boolean;
+  content: string;
+  message?: string; // Alias for content for easier use
+  type: NotificationType | string;
+  isRead: boolean;
   createdAt: string;
+  user?: User;
 }
 
 export interface DailyRevenue {

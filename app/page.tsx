@@ -9,66 +9,161 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockTables, mockMenuItems, mockBookings } from '@/lib/mock-data';
 import { CalendarDays, Clock, CircleDot, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
+import { tablesApi, menuApi, bookingsApi } from '@/lib/api';
+import type { CreatePublicBookingDto } from '@/lib/api/bookings';
+import { Table, MenuItem, Booking } from '@/lib/types';
 
 export default function Home() {
   const [realtimeUpdate, setRealtimeUpdate] = useState(0);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  // Real API data states
+  const [tables, setTables] = useState<Table[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [bookingForm, setBookingForm] = useState({
-    name: '',
-    phone: '',
-    tableType: '',
-    date: '',
-    time: '',
+    selectedTableId: '',
+    guestName: '',
+    guestEmail: '',
+    guestPhone: '',
+    startDate: '',
+    startTime: '',
+    durationHours: '2',
   });
 
+  // Fetch real data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [tablesData, menuData] = await Promise.all([
+          tablesApi.getAll(),
+          menuApi.getAll(),
+        ]);
+        setTables(tablesData);
+        setMenuItems(menuData);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load data. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Real-time updates every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setRealtimeUpdate(prev => prev + 1);
+      // Refetch tables for real-time status
+      tablesApi.getAll().then(setTables).catch(console.error);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const availableTables = mockTables.filter(t => t.status === 'available');
+  const availableTables = tables.filter(t => t.status === 'IDLE');
 
-  const handleBooking = () => {
-    if (!bookingForm.name || !bookingForm.phone || !bookingForm.tableType || !bookingForm.date || !bookingForm.time) {
+  const handleBooking = async () => {
+    if (!bookingForm.selectedTableId || !bookingForm.guestName || !bookingForm.guestEmail || 
+        !bookingForm.guestPhone || !bookingForm.startDate || !bookingForm.startTime) {
       toast({
         title: 'Error',
-        description: 'Please fill all fields',
+        description: 'Please fill all required fields',
         variant: 'destructive',
       });
       return;
     }
 
-    toast({
-      title: 'Booking Confirmed!',
-      description: 'Your table has been reserved successfully',
-    });
+    try {
+      setIsSubmitting(true);
 
-    setBookingForm({
-      name: '',
-      phone: '',
-      tableType: '',
-      date: '',
-      time: '',
-    });
-    setIsBookingOpen(false);
+      // Combine date and time into ISO string
+      const startDateTime = new Date(`${bookingForm.startDate}T${bookingForm.startTime}`);
+      const endDateTime = new Date(startDateTime.getTime() + parseInt(bookingForm.durationHours) * 60 * 60 * 1000);
+
+      const bookingData: CreatePublicBookingDto = {
+        tableId: bookingForm.selectedTableId,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+        guestName: bookingForm.guestName,
+        guestEmail: bookingForm.guestEmail,
+        guestPhone: bookingForm.guestPhone,
+      };
+
+      await bookingsApi.createPublic(bookingData);
+
+      toast({
+        title: 'Booking Confirmed!',
+        description: 'Your table has been reserved successfully. We will contact you shortly.',
+      });
+
+      // Reset form
+      setBookingForm({
+        selectedTableId: '',
+        guestName: '',
+        guestEmail: '',
+        guestPhone: '',
+        startDate: '',
+        startTime: '',
+        durationHours: '2',
+      });
+      setIsBookingOpen(false);
+
+      // Refresh tables
+      tablesApi.getAll().then(setTables).catch(console.error);
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      toast({
+        title: 'Booking Failed',
+        description: error.response?.data?.message || 'Failed to create booking. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getSelectedTable = () => {
+    return tables.find(t => t.id === bookingForm.selectedTableId);
+  };
+
+  const calculateTotalPrice = () => {
+    const table = getSelectedTable();
+    if (!table) return 0;
+    return table.priceHour * parseInt(bookingForm.durationHours || '0');
   };
 
   const statusColors = {
-    available: 'bg-emerald-500',
-    occupied: 'bg-orange-500',
-    reserved: 'bg-blue-500',
-    maintenance: 'bg-slate-500',
+    IDLE: 'bg-emerald-500',
+    PLAYING: 'bg-orange-500',
+    RESERVED: 'bg-blue-500',
+    MAINTENANCE: 'bg-slate-500',
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        <PublicHeader />
+        <div className="container mx-auto px-4 py-20 text-center">
+          <div className="text-xl text-slate-600 dark:text-slate-400">Loading...</div>
+        </div>
+        <PublicFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -98,73 +193,141 @@ export default function Home() {
                   Book a Table Now
                 </Button>
               </DialogTrigger>
-              <DialogContent className="dark:border-slate-800 dark:bg-slate-900 dark:text-white">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto dark:border-slate-800 dark:bg-slate-900 dark:text-white">
                 <DialogHeader>
                   <DialogTitle>Reserve Your Table</DialogTitle>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Choose an available table and fill in your details</p>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Full Name</Label>
-                    <Input
-                      value={bookingForm.name}
-                      onChange={(e) => setBookingForm({ ...bookingForm, name: e.target.value })}
-                      className="dark:border-slate-700 dark:bg-slate-800"
-                      placeholder="John Doe"
-                    />
+                <div className="space-y-6 py-4">
+                  {/* Table Selection */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Select Available Table *</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-2 border rounded-lg dark:border-slate-700">
+                      {availableTables.length === 0 ? (
+                        <div className="col-span-full text-center py-8 text-slate-500">
+                          No tables available at the moment
+                        </div>
+                      ) : (
+                        availableTables.map((table) => (
+                          <button
+                            key={table.id}
+                            type="button"
+                            onClick={() => setBookingForm({ ...bookingForm, selectedTableId: table.id })}
+                            className={cn(
+                              'p-4 border-2 rounded-lg text-left transition-all hover:scale-105',
+                              bookingForm.selectedTableId === table.id
+                                ? 'border-emerald-500 bg-emerald-500/10'
+                                : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300'
+                            )}
+                          >
+                            <div className="font-semibold text-sm">{table.code}</div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400">{table.type}</div>
+                            <div className="text-xs font-medium text-emerald-600 mt-1">
+                              {table.priceHour.toLocaleString('vi-VN')}đ/h
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Full Name *</Label>
+                      <Input
+                        value={bookingForm.guestName}
+                        onChange={(e) => setBookingForm({ ...bookingForm, guestName: e.target.value })}
+                        className="dark:border-slate-700 dark:bg-slate-800"
+                        placeholder="Nguyễn Văn A"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email *</Label>
+                      <Input
+                        type="email"
+                        value={bookingForm.guestEmail}
+                        onChange={(e) => setBookingForm({ ...bookingForm, guestEmail: e.target.value })}
+                        className="dark:border-slate-700 dark:bg-slate-800"
+                        placeholder="email@example.com"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label>Phone Number</Label>
+                    <Label>Phone Number *</Label>
                     <Input
-                      value={bookingForm.phone}
-                      onChange={(e) => setBookingForm({ ...bookingForm, phone: e.target.value })}
+                      value={bookingForm.guestPhone}
+                      onChange={(e) => setBookingForm({ ...bookingForm, guestPhone: e.target.value })}
                       className="dark:border-slate-700 dark:bg-slate-800"
                       placeholder="+84 123 456 789"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Table Type</Label>
-                    <Select value={bookingForm.tableType} onValueChange={(value) => setBookingForm({ ...bookingForm, tableType: value })}>
-                      <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800">
-                        <SelectValue placeholder="Select table type" />
-                      </SelectTrigger>
-                      <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
-                        <SelectItem value="Pool">Pool Table</SelectItem>
-                        <SelectItem value="Snooker">Snooker Table</SelectItem>
-                        <SelectItem value="Carom">Carom Table</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label>Date</Label>
+                      <Label>Date *</Label>
                       <Input
                         type="date"
-                        value={bookingForm.date}
-                        onChange={(e) => setBookingForm({ ...bookingForm, date: e.target.value })}
+                        value={bookingForm.startDate}
+                        onChange={(e) => setBookingForm({ ...bookingForm, startDate: e.target.value })}
+                        className="dark:border-slate-700 dark:bg-slate-800"
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Start Time *</Label>
+                      <Input
+                        type="time"
+                        value={bookingForm.startTime}
+                        onChange={(e) => setBookingForm({ ...bookingForm, startTime: e.target.value })}
                         className="dark:border-slate-700 dark:bg-slate-800"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Time</Label>
+                      <Label>Duration (hours) *</Label>
                       <Input
-                        type="time"
-                        value={bookingForm.time}
-                        onChange={(e) => setBookingForm({ ...bookingForm, time: e.target.value })}
+                        type="number"
+                        min="1"
+                        max="12"
+                        value={bookingForm.durationHours}
+                        onChange={(e) => setBookingForm({ ...bookingForm, durationHours: e.target.value })}
                         className="dark:border-slate-700 dark:bg-slate-800"
                       />
                     </div>
                   </div>
+
+                  {/* Price Summary */}
+                  {bookingForm.selectedTableId && bookingForm.durationHours && (
+                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="text-sm text-slate-600 dark:text-slate-400">Estimated Total</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-500">
+                            {getSelectedTable()?.code} × {bookingForm.durationHours}h
+                          </div>
+                        </div>
+                        <div className="text-2xl font-bold text-emerald-600">
+                          {calculateTotalPrice().toLocaleString('vi-VN')}đ
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button
                     variant="outline"
                     onClick={() => setIsBookingOpen(false)}
                     className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                    disabled={isSubmitting}
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleBooking} className="bg-emerald-600 hover:bg-emerald-700">
-                    Confirm Booking
+                  <Button 
+                    onClick={handleBooking} 
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Booking...' : 'Confirm Booking'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -181,28 +344,27 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
-            {mockTables.map((table) => (
+            {tables.map((table) => (
               <Card
                 key={`${table.id}-${realtimeUpdate}`}
                 className={cn(
                   'border-2 transition-all duration-500 hover:scale-105',
-                  table.status === 'available' && 'border-emerald-500/30 bg-emerald-500/5',
-                  table.status === 'occupied' && 'border-orange-500/30 bg-orange-500/5',
-                  table.status === 'reserved' && 'border-blue-500/30 bg-blue-500/5',
-                  table.status === 'maintenance' && 'border-slate-500/30 bg-slate-500/5'
+                  table.status === 'IDLE' && 'border-emerald-500/30 bg-emerald-500/5',
+                  table.status === 'PLAYING' && 'border-orange-500/30 bg-orange-500/5',
+                  table.status === 'RESERVED' && 'border-blue-500/30 bg-blue-500/5',
                 )}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-slate-900 dark:text-white">{table.name}</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">{table.code}</h3>
                     <div className={cn('h-3 w-3 rounded-full', statusColors[table.status])} />
                   </div>
                   <div className="text-sm text-slate-600 mb-2 dark:text-slate-400">{table.type}</div>
                   <div className="text-lg font-bold text-emerald-500">
-                    {table.pricePerHour.toLocaleString()}đ/h
+                    {table.priceHour.toLocaleString()}đ/h
                   </div>
                   <div className="text-xs text-slate-500 mt-2 capitalize dark:text-slate-400">
-                    {table.status}
+                    {table.status.toLowerCase()}
                   </div>
                 </CardContent>
               </Card>
@@ -234,18 +396,24 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {mockMenuItems.slice(0, 8).map((item) => (
+            {menuItems.slice(0, 8).map((item) => (
               <Card
                 key={item.id}
                 className="overflow-hidden transition-all duration-300 hover:border-emerald-500/30 dark:border-slate-800 dark:bg-slate-900"
               >
-                <div className="relative h-48 w-full">
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                  />
+                <div className="relative h-48 w-full bg-slate-200 dark:bg-slate-800">
+                  {item.image ? (
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <UtensilsCrossed className="h-16 w-16 text-slate-400" />
+                    </div>
+                  )}
                   <Badge className="absolute top-2 right-2 bg-emerald-500">
                     {item.category}
                   </Badge>
@@ -257,59 +425,9 @@ export default function Home() {
                     <span className="text-xl font-bold text-emerald-500">
                       {item.price.toLocaleString()}đ
                     </span>
-                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-                      Order
+                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" disabled={!item.isAvailable}>
+                      {item.isAvailable ? 'Order' : 'Unavailable'}
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="bookings" className="py-16 bg-slate-100 dark:bg-slate-900/50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4 dark:text-white">My Bookings</h2>
-            <p className="text-slate-600 dark:text-slate-400">Track your upcoming reservations</p>
-          </div>
-
-          <div className="max-w-4xl mx-auto space-y-4">
-            {mockBookings.filter(b => b.customerId === 'c1' || b.customerId === 'c2').map((booking) => (
-              <Card key={booking.id} className="dark:border-slate-800 dark:bg-slate-900">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                      <div className="bg-emerald-500/10 p-4 rounded-lg">
-                        <CircleDot className="h-8 w-8 text-emerald-500" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 text-lg mb-1 dark:text-white">{booking.tableName}</h3>
-                        <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
-                          <span className="flex items-center gap-1">
-                            <CalendarDays className="h-4 w-4" />
-                            {new Date(booking.startTime).toLocaleDateString()}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            {new Date(booking.startTime).toLocaleTimeString()} - {new Date(booking.endTime).toLocaleTimeString()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-slate-900 mb-1 dark:text-white">
-                        {booking.totalPrice.toLocaleString()}đ
-                      </div>
-                      <Badge className={cn(
-                        booking.status === 'confirmed' && 'bg-blue-500',
-                        booking.status === 'ongoing' && 'bg-emerald-500',
-                        booking.status === 'completed' && 'bg-slate-500'
-                      )}>
-                        {booking.status}
-                      </Badge>
-                    </div>
                   </div>
                 </CardContent>
               </Card>

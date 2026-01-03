@@ -2,9 +2,10 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/lib/contexts/auth-context';
 import { Sidebar } from '@/components/admin/sidebar';
 import { Header } from '@/components/admin/header';
+import { PageSkeleton } from '@/components/loaders/page-skeleton';
 
 export default function AdminLayout({
   children,
@@ -12,15 +13,23 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const user = useAppStore((state) => state.user);
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
+    if (!isLoading && (!user || (user.role !== 'ADMIN' && user.role !== 'STAFF'))) {
       router.push('/login');
     }
-  }, [user, router]);
+  }, [user, isLoading, router]);
 
-  if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <PageSkeleton />
+      </div>
+    );
+  }
+
+  if (!user || (user.role !== 'ADMIN' && user.role !== 'STAFF')) {
     return null;
   }
 

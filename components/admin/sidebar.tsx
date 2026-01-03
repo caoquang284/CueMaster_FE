@@ -15,7 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/lib/contexts/auth-context';
 import type { UserRole } from '@/lib/types';
 
 type SidebarItem = {
@@ -29,7 +29,7 @@ const menuItems: SidebarItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
   { icon: Square, label: 'Tables', href: '/admin/tables' },
   { icon: Calendar, label: 'Bookings', href: '/admin/bookings' },
-  { icon: Users, label: 'Users', href: '/admin/users', roles: ['admin'] },
+  { icon: Users, label: 'Users', href: '/admin/users', roles: ['ADMIN'] },
   { icon: UtensilsCrossed, label: 'Menu', href: '/admin/menu' },
   { icon: ShoppingCart, label: 'Orders', href: '/admin/orders' },
   { icon: CreditCard, label: 'Payments', href: '/admin/payments' },
@@ -39,9 +39,8 @@ const menuItems: SidebarItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const userRole = useAppStore(
-    (state) => (state.user?.role ?? 'staff') as UserRole
-  );
+  const { user } = useAuth();
+  const userRole = (user?.role ?? 'staff') as UserRole;
   const filteredMenu = menuItems.filter(
     (item) => !item.roles || item.roles.includes(userRole)
   );

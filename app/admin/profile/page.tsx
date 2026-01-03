@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { useAppStore } from "@/lib/store";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { usersApi } from "@/lib/api/users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,31 +11,26 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { PageSkeleton } from "@/components/loaders/page-skeleton";
 
 export default function ProfilePage() {
-  const user = useAppStore((state) => state.user);
-  const updateUserProfile = useAppStore((state) => state.updateUserProfile);
-  const updateUserAvatar = useAppStore((state) => state.updateUserAvatar);
-  const updateUserPassword = useAppStore((state) => state.updateUserPassword);
+  const { user, isLoading } = useAuth();
   const { toast } = useToast();
 
   const [name, setName] = useState(user?.name ?? "");
-  const [phone, setPhone] = useState(user?.phone ?? "");
-  const [bio, setBio] = useState(user?.bio ?? "");
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? "");
-
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [updating, setUpdating] = useState(false);
 
   const initials = useMemo(() => {
-    if (!user?.name) return "AD";
+    if (!user?.name) return user?.email?.slice(0, 2).toUpperCase() || "U";
     return user.name
       .split(" ")
       .map(part => part[0]?.toUpperCase())
       .join("")
       .slice(0, 2);
-  }, [user?.name]);
+  }, [user?.name, user?.email]);
+
+  if (isLoading) return <PageSkeleton />;
 
   if (!user) {
     return (
@@ -50,209 +46,124 @@ export default function ProfilePage() {
     );
   }
 
-  const handleProfileSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    updateUserProfile({ name, phone, bio });
-    toast({
-      title: "Profile updated",
-      description: "Your personal information has been saved successfully.",
-    });
-  };
-
-  const handleAvatarSave = () => {
-    updateUserAvatar(avatarUrl.trim() ? avatarUrl.trim() : undefined);
-    toast({
-      title: "Avatar updated",
-      description: avatarUrl.trim()
-        ? "Your profile picture has been updated."
-        : "Avatar removed. We will use your initials instead.",
-    });
-  };
-
-  const handlePasswordSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!newPassword || !confirmPassword) {
+    
+    try {
+      setUpdating(true);
+      await usersApi.updateMe({
+        name: name || null,
+        email: email,
+      });
+      
       toast({
-        title: "Missing password",
-        description: "Please enter and confirm your new password.",
+        title: "Profile updated",
+        description: "Your personal information has been saved successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update profile",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setUpdating(false);
     }
-
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Passwords do not match",
-        description: "Please make sure both password fields are identical.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const success = updateUserPassword(currentPassword, newPassword);
-    if (!success) {
-      toast({
-        title: "Incorrect current password",
-        description: "Please double-check your current password and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    toast({
-      title: "Password updated",
-      description: "Your password has been changed successfully.",
-    });
   };
 
   return (
     <div className="space-y-6">
-      <Card>
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Profile</h1>
+        <p className="text-slate-600 dark:text-slate-400">Manage your personal information</p>
+      </div>
+
+      <Card className="dark:border-slate-800 dark:bg-slate-900">
         <CardHeader>
-          <CardTitle>Profile Picture</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={user.avatarUrl} alt={user.name} />
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-            <div className="space-y-2 flex-1">
-              <Label htmlFor="avatar">Avatar URL</Label>
-              <Input
-                id="avatar"
-                value={avatarUrl}
-                onChange={(event) => setAvatarUrl(event.target.value)}
-                placeholder="https://example.com/avatar.jpg"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button type="button" onClick={handleAvatarSave}>
-              Update avatar
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setAvatarUrl("");
-                updateUserAvatar(undefined);
-                toast({
-                  title: "Avatar removed",
-                  description: "We will show your initials until you upload a new avatar.",
-                });
-              }}
-            >
-              Remove avatar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
+          <CardTitle className="text-slate-900 dark:text-white">Personal Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleProfileSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" value={user.email} disabled />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder="+84 123 456 789"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Input id="role" value={user.role} disabled className="capitalize" />
+          <div className="flex flex-col sm:flex-row items-start gap-6 mb-6">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src="" alt={user.name || user.email} />
+              <AvatarFallback className="text-2xl bg-blue-500 text-white">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
+                {user.name || "No name set"}
+              </h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{user.email}</p>
+              <div className="flex gap-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  {user.role}
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  {user.isActive ? 'Active' : 'Inactive'}
+                </span>
               </div>
             </div>
+          </div>
+
+          <Separator className="my-6" />
+
+          <form onSubmit={handleProfileSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                value={bio}
-                onChange={(event) => setBio(event.target.value)}
-                placeholder="A short description about yourself..."
-                rows={4}
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
               />
             </div>
-            <div className="flex justify-end">
-              <Button type="submit">Save changes</Button>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+              />
+            </div>
+
+            <div className="pt-4">
+              <Button type="submit" disabled={updating}>
+                {updating ? 'Saving...' : 'Save Changes'}
+              </Button>
             </div>
           </form>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="dark:border-slate-800 dark:bg-slate-900">
         <CardHeader>
-          <CardTitle>Security</CardTitle>
+          <CardTitle className="text-slate-900 dark:text-white">Account Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="current-password">Current password</Label>
-                <Input
-                  id="current-password"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(event) => setCurrentPassword(event.target.value)}
-                  placeholder="Enter current password"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-password">New password</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  placeholder="Enter new password"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm password</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  placeholder="Re-enter new password"
-                  required
-                />
-              </div>
+          <div className="space-y-3">
+            <div className="flex justify-between py-2">
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">User ID</span>
+              <span className="text-sm text-slate-900 dark:text-white font-mono">{user.id.slice(0, 8)}...</span>
             </div>
             <Separator />
-            <div className="flex justify-end">
-              <Button type="submit" variant="outline">
-                Update password
-              </Button>
+            <div className="flex justify-between py-2">
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Member Since</span>
+              <span className="text-sm text-slate-900 dark:text-white">
+                {new Date(user.createdAt).toLocaleDateString('vi-VN')}
+              </span>
             </div>
-          </form>
+            <Separator />
+            <div className="flex justify-between py-2">
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Last Updated</span>
+              <span className="text-sm text-slate-900 dark:text-white">
+                {new Date(user.updatedAt).toLocaleDateString('vi-VN')}
+              </span>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

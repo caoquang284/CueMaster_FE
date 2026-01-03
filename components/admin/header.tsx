@@ -1,6 +1,7 @@
 "use client";
 
-import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/lib/contexts/auth-context';
+import { useUnreadCount } from '@/lib/hooks/use-notifications';
 import { Button } from '@/components/ui/button';
 import { Bell, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -19,15 +20,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 export function Header() {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const user = useAppStore((state) => state.user);
-  const notifications = useAppStore((state) => state.notifications);
-  const logout = useAppStore((state) => state.logout);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const { user, logout } = useAuth();
+  const { count: unreadCount } = useUnreadCount();
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
   };
 
   const userInitials = user?.name
@@ -42,9 +39,9 @@ export function Header() {
     <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-sm flex items-center justify-between px-6 dark:border-slate-800 dark:bg-slate-900/50">
       <div>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-          Welcome back, {user?.name || 'Admin'}
+          Xin chào, {user?.name || 'Admin'}
         </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">Manage your billiard business</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Quản lý hệ thống bi-a của bạn</p>
       </div>
 
       <div className="flex items-center gap-2">
@@ -64,7 +61,7 @@ export function Header() {
           onClick={() => router.push('/admin/notifications')}
         >
           <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
+          {unreadCount && unreadCount > 0 && (
             <Badge
               variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
@@ -82,7 +79,6 @@ export function Header() {
               className="relative h-10 w-10 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
             >
               <Avatar className="h-9 w-9">
-                <AvatarImage src={user?.avatarUrl} alt={user?.name} />
                 <AvatarFallback>{userInitials}</AvatarFallback>
               </Avatar>
             </Button>
@@ -102,15 +98,19 @@ export function Header() {
             <DropdownMenuItem onSelect={() => router.push('/admin/profile')}>
               Profile
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => router.push('/admin/profile')}>
+              Hồ sơ cá nhân
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => router.push('/admin/settings')}>
-              Settings
+              Cài đặt
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={handleLogout}
               className="text-red-500 focus:bg-red-50 focus:text-red-500 dark:focus:bg-red-500/10"
             >
-              Logout
+              Đăng xuất
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

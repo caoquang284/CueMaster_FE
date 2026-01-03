@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,27 +15,40 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const { register } = useAuth();
   const { toast } = useToast();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
       toast({
-        title: 'Error',
-        description: 'Passwords do not match',
+        title: 'Lỗi',
+        description: 'Mật khẩu không khớp',
         variant: 'destructive',
       });
       return;
     }
 
-    toast({
-      title: 'Success',
-      description: 'Account created successfully',
-    });
+    if (password.length < 6) {
+      toast({
+        title: 'Lỗi',
+        description: 'Mật khẩu phải có ít nhất 6 ký tự',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    router.push('/login');
+    setIsLoading(true);
+
+    try {
+      await register({ email, password, name });
+    } catch (error) {
+      // Error handling is done in auth context
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -44,25 +57,26 @@ export default function RegisterPage() {
         <CardHeader className="space-y-2 text-center">
           <div className="flex justify-center mb-2">
             <div className="bg-emerald-500/10 p-3 rounded-full">
-              <CircleDot className="h-8 w-8 text-emerald-500" />
+              <img src="/favicon.png" alt="Logo" className="h-8 w-8" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">Create Account</CardTitle>
+          <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">Tạo tài khoản</CardTitle>
           <CardDescription className="text-slate-600 dark:text-slate-400">
-            Join CueMaster today
+            Đăng ký tài khoản CueMaster
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-slate-700 dark:text-slate-200">Full Name</Label>
+              <Label htmlFor="name" className="text-slate-700 dark:text-slate-200">Họ và tên</Label>
               <Input
                 id="name"
                 type="text"
-                placeholder="John Doe"
+                placeholder="Nguyễn Văn A"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                disabled={isLoading}
                 className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
@@ -71,15 +85,16 @@ export default function RegisterPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="john@example.com"
+                placeholder="example@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
                 className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-700 dark:text-slate-200">Password</Label>
+              <Label htmlFor="password" className="text-slate-700 dark:text-slate-200">Mật khẩu</Label>
               <Input
                 id="password"
                 type="password"
@@ -87,11 +102,13 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
+                minLength={6}
                 className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-slate-700 dark:text-slate-200">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-slate-700 dark:text-slate-200">Xác nhận mật khẩu</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -99,20 +116,22 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                disabled={isLoading}
                 className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
             <Button
               type="submit"
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={isLoading}
             >
-              Create Account
+              {isLoading ? 'Đang đăng ký...' : 'Đăng ký'}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">
-            Already have an account?{' '}
+            Đã có tài khoản?{' '}
             <Link href="/login" className="text-emerald-500 hover:text-emerald-400">
-              Sign In
+              Đăng nhập
             </Link>
           </div>
         </CardContent>

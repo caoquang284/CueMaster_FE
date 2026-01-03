@@ -1,44 +1,53 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useTables } from '@/lib/hooks/use-tables';
+import { useBookings } from '@/lib/hooks/use-bookings';
+import { usePayments } from '@/lib/hooks/use-payments';
+import { useOrders } from '@/lib/hooks/use-orders';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Square, Calendar, TrendingUp } from 'lucide-react';
-import { mockDailyRevenue, mockTableUsage } from '@/lib/mock-data';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { cn } from '@/lib/utils';
+import { DollarSign, Square, Calendar, TrendingUp, Users, ShoppingCart } from 'lucide-react';
+import { PageSkeleton } from '@/components/loaders/page-skeleton';
+import { Badge } from '@/components/ui/badge';
 
 export default function AdminDashboard() {
-  const { tables, bookings, payments } = useAppStore();
-  const [realtimeUpdate, setRealtimeUpdate] = useState(0);
+  const { tables, isLoading: tablesLoading } = useTables();
+  const { bookings, isLoading: bookingsLoading } = useBookings();
+  const { payments, isLoading: paymentsLoading } = usePayments();
+  const { orders, isLoading: ordersLoading } = useOrders({});
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRealtimeUpdate(prev => prev + 1);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  if (tablesLoading || bookingsLoading || paymentsLoading || ordersLoading) {
+    return <PageSkeleton />;
+  }
 
-  const todayRevenue = payments
-    .filter(p => p.createdAt.startsWith('2025-10-26'))
-    .reduce((sum, p) => sum + p.totalAmount, 0);
+  // Calculate stats
+  const totalRevenue = (payments || [])
+    .filter(p => p.status === 'PAID')
+    .reduce((sum, p) => sum + p.total, 0);
 
-  const activeTables = tables.filter(t => t.status === 'occupied').length;
-  const todayBookings = bookings.filter(b => b.startTime.startsWith('2025-10-26')).length;
+  const activeTables = (tables || []).filter(t => t.status === 'PLAYING').length;
+  const totalTables = (tables || []).length;
 
-  const statusColors = {
-    available: 'bg-emerald-500',
-    occupied: 'bg-orange-500',
-    reserved: 'bg-blue-500',
-    maintenance: 'bg-red-500',
-  };
+  const today = new Date().toISOString().split('T')[0];
+  const todayBookings = (bookings || []).filter(b => 
+    b.startTime.startsWith(today)
+  ).length;
 
-  const statusLabels = {
-    available: 'Available',
-    occupied: 'Occupied',
-    reserved: 'Reserved',
-    maintenance: 'Maintenance',
-  };
+  const pendingBookings = (bookings || []).filter(b => b.status === 'PENDING').length;
+  const confirmedBookings = (bookings || []).filter(b => b.status === 'CONFIRMED').length;
+
+  const openOrders = (orders || []).filter(o => o.status === 'OPEN').length;
+  const totalOrderRevenue = (orders || [])
+    .filter(o => o.status === 'PAID')
+    .reduce((sum, o) => sum + o.total, 0);
+
+  // Recent activities
+  const recentBookings = (bookings || [])
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
+
+  const recentPayments = (payments || [])
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -47,20 +56,21 @@ export default function AdminDashboard() {
         <p className="text-slate-600 dark:text-slate-400">Overview of your billiard business</p>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
-              Today's Revenue
+              Total Revenue
             </CardTitle>
             <DollarSign className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              {todayRevenue.toLocaleString()}đ
+              {totalRevenue.toLocaleString()}đ
             </div>
             <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">
-              <span className="text-emerald-500">+12.5%</span> from yesterday
+              From {(payments || []).filter(p => p.status === 'PAID').length} payments
             </p>
           </CardContent>
         </Card>
@@ -74,10 +84,10 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              {activeTables} / {tables.length}
+              {activeTables} / {totalTables}
             </div>
             <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">
-              {Math.round((activeTables / tables.length) * 100)}% occupied
+              {totalTables > 0 ? Math.round((activeTables / totalTables) * 100) : 0}% occupied
             </p>
           </CardContent>
         </Card>
@@ -92,7 +102,7 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{todayBookings}</div>
             <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">
-              <span className="text-blue-500">+3</span> new bookings
+              {pendingBookings} pending, {confirmedBookings} confirmed
             </p>
           </CardContent>
         </Card>
@@ -100,123 +110,186 @@ export default function AdminDashboard() {
         <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
-              Growth
+              Open Orders
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <ShoppingCart className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white">+18.2%</div>
-            <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">vs last week</p>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">{openOrders}</div>
+            <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">
+              Revenue: {totalOrderRevenue.toLocaleString()}đ
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="dark:border-slate-800 dark:bg-slate-900">
-          <CardHeader>
-            <CardTitle className="text-slate-900 dark:text-white">Revenue Trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockDailyRevenue}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis
-                  dataKey="date"
-                  stroke="#94a3b8"
-                  tick={{ fill: '#94a3b8' }}
-                />
-                <YAxis
-                  stroke="#94a3b8"
-                  tick={{ fill: '#94a3b8' }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={{ fill: '#10b981', r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="dark:border-slate-800 dark:bg-slate-900">
-          <CardHeader>
-            <CardTitle className="text-slate-900 dark:text-white">Top Tables Usage</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockTableUsage.slice(0, 3)}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis
-                  dataKey="tableName"
-                  stroke="#94a3b8"
-                  tick={{ fill: '#94a3b8' }}
-                />
-                <YAxis
-                  stroke="#94a3b8"
-                  tick={{ fill: '#94a3b8' }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Bar dataKey="usageCount" fill="#10b981" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Tables Status Overview */}
       <Card className="dark:border-slate-800 dark:bg-slate-900">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-            Table Floor Map
-            <span className="text-xs font-normal text-slate-600 dark:text-slate-400">
-              (Live updates every 5s)
-            </span>
-          </CardTitle>
+          <CardTitle className="text-slate-900 dark:text-white">Tables Status</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {tables.map((table) => (
-              <div
-                key={`${table.id}-${realtimeUpdate}`}
-                className={cn(
-                  'p-4 rounded-lg border-2 transition-all duration-500 hover:scale-105',
-                  table.status === 'available' && 'border-emerald-500 bg-emerald-500/10',
-                  table.status === 'occupied' && 'border-orange-500 bg-orange-500/10',
-                  table.status === 'reserved' && 'border-blue-500 bg-blue-500/10',
-                  table.status === 'maintenance' && 'border-red-500 bg-red-500/10'
-                )}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-slate-900 dark:text-white">{table.name}</span>
-                  <div className={cn('h-3 w-3 rounded-full', statusColors[table.status])} />
-                </div>
-                <div className="text-xs text-slate-600 mb-1 dark:text-slate-400">{table.type}</div>
-                <div className="text-sm font-medium text-slate-900 dark:text-white">
-                  {table.pricePerHour.toLocaleString()}đ/h
-                </div>
-                <div className="text-xs text-slate-500 mt-2 capitalize dark:text-slate-400">
-                  {statusLabels[table.status]}
-                </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
+              <div className="h-12 w-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold">
+                {(tables || []).filter(t => t.status === 'IDLE').length}
               </div>
-            ))}
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Available</p>
+                <p className="text-xs text-slate-500 dark:text-slate-500">Ready to use</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20">
+              <div className="h-12 w-12 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold">
+                {(tables || []).filter(t => t.status === 'PLAYING').length}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Playing</p>
+                <p className="text-xs text-slate-500 dark:text-slate-500">Currently in use</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                {(tables || []).filter(t => t.status === 'RESERVED').length}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Reserved</p>
+                <p className="text-xs text-slate-500 dark:text-slate-500">Booked in advance</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Bookings */}
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardHeader>
+            <CardTitle className="text-slate-900 dark:text-white">Recent Bookings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentBookings.length > 0 ? (
+                recentBookings.map((booking) => (
+                  <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm text-slate-900 dark:text-white">
+                        {booking.table?.code || `Table ${booking.tableId.slice(0, 8)}`}
+                      </p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                        {new Date(booking.startTime).toLocaleString('vi-VN')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={
+                        booking.status === 'CONFIRMED' ? 'default' : 
+                        booking.status === 'PENDING' ? 'secondary' : 
+                        booking.status === 'COMPLETED' ? 'outline' : 
+                        'destructive'
+                      }>
+                        {booking.status}
+                      </Badge>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                        {booking.totalPrice.toLocaleString()}đ
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-slate-500 py-8">No bookings yet</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Payments */}
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardHeader>
+            <CardTitle className="text-slate-900 dark:text-white">Recent Payments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentPayments.length > 0 ? (
+                recentPayments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm text-slate-900 dark:text-white">
+                        Payment #{payment.id.slice(0, 8)}
+                      </p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                        {new Date(payment.createdAt).toLocaleString('vi-VN')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={
+                        payment.status === 'PAID' ? 'default' : 
+                        payment.status === 'PENDING' ? 'secondary' : 
+                        'destructive'
+                      }>
+                        {payment.method}
+                      </Badge>
+                      <p className="text-sm font-semibold text-green-600 dark:text-green-400 mt-1">
+                        {payment.total.toLocaleString()}đ
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-slate-500 py-8">No payments yet</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-500 mb-1">
+                {(bookings || []).length}
+              </div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">Total Bookings</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-500 mb-1">
+                {(orders || []).length}
+              </div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">Total Orders</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-500 mb-1">
+                {(payments || []).length}
+              </div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">Total Payments</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-500 mb-1">
+                {totalTables}
+              </div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">Total Tables</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useOrders } from '@/lib/hooks/use-orders';
+import { useTables } from '@/lib/hooks/use-tables';
+import { useMenu } from '@/lib/hooks/use-menu';
+import { ordersApi } from '@/lib/api/orders';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,18 +12,34 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Minus, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { PageSkeleton } from '@/components/loaders/page-skeleton';
+import { OrderStatus } from '@/lib/types';
 
 export default function OrdersPage() {
-  const { orders, bookings, menuItems, addOrder, closeOrder, addPayment } = useAppStore();
+  const { orders, isLoading, isError, mutate } = useOrders({});
+  const { tables } = useTables();
+  const { menuItems } = useMenu();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState('');
+  const [selectedTableId, setSelectedTableId] = useState('');
   const [orderItems, setOrderItems] = useState<Array<{ menuItemId: string; quantity: number }>>([]);
+  const [actioningId, setActioningId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const activeBookings = bookings.filter(b => b.status === 'ongoing' || b.status === 'confirmed');
+  if (isLoading) return <PageSkeleton />;
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-red-500 text-lg mb-2">Failed to load orders</p>
+          <Button onClick={() => mutate()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleAddOrderItem = () => {
     setOrderItems([...orderItems, { menuItemId: '', quantity: 1 }]);
@@ -38,70 +57,66 @@ export default function OrdersPage() {
 
   const calculateTotal = () => {
     return orderItems.reduce((sum, item) => {
-      const menuItem = menuItems.find(m => m.id === item.menuItemId);
+      const menuItem = (menuItems || []).find(m => m.id === item.menuItemId);
       return sum + (menuItem ? menuItem.price * item.quantity : 0);
     }, 0);
   };
 
-  const handleCreateOrder = () => {
-    if (!selectedBooking || orderItems.length === 0) {
-      toast({
-        title: 'Error',
-        description: 'Please select a booking and add items',
-        variant: 'destructive',
-      });
+  const handleCreateOrder = async () => {
+    if (!selectedTableId || orderItems.length === 0) {
+      toast({ title: 'Error', description: 'Please select a table and add items', variant: 'destructive' });
       return;
     }
 
-    const booking = bookings.find(b => b.id === selectedBooking);
-    if (!booking) return;
+    const validItems = orderItems.filter(item => item.menuItemId && item.quantity > 0);
+    if (validItems.length === 0) {
+      toast({ title: 'Error', description: 'Please add valid items', variant: 'destructive' });
+      return;
+    }
 
-    const items = orderItems.map(item => {
-      const menuItem = menuItems.find(m => m.id === item.menuItemId);
-      return {
-        menuItemId: item.menuItemId,
-        menuItemName: menuItem?.name || '',
-        quantity: item.quantity,
-        price: menuItem?.price || 0,
-      };
-    });
+    try {
+      await ordersApi.create({ tableId: selectedTableId });
+      const newOrder = (await ordersApi.getAll({ tableId: selectedTableId }))[0];
+      
+      for (const item of validItems) {
+        await ordersApi.addItem(newOrder.id, {
+          menuItemId: item.menuItemId,
+          quantity: item.quantity,
+        });
+      }
 
-    addOrder({
-      bookingId: booking.id,
-      tableId: booking.tableId,
-      tableName: booking.tableName,
-      items,
-      totalPrice: calculateTotal(),
-      status: 'open',
-    });
-
-    toast({
-      title: 'Success',
-      description: 'Order created successfully',
-    });
-
-    setSelectedBooking('');
-    setOrderItems([]);
-    setIsDialogOpen(false);
+      await mutate();
+      toast({ title: 'Success', description: 'Order created successfully' });
+      setIsDialogOpen(false);
+      setSelectedTableId('');
+      setOrderItems([]);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
 
-  const handleCloseOrder = (order: any) => {
-    closeOrder(order.id);
+  const handleCloseOrder = async (id: string) => {
+    if (!confirm('Are you sure you want to close this order?')) return;
 
-    addPayment({
-      orderId: order.id,
-      bookingId: order.bookingId,
-      tableId: order.tableId,
-      tableName: order.tableName,
-      totalAmount: order.totalPrice,
-      method: 'cash',
-      status: 'pending',
-    });
+    try {
+      setActioningId(id);
+      await ordersApi.close(id);
+      await mutate();
+      toast({ title: 'Success', description: 'Order closed' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setActioningId(null);
+    }
+  };
 
-    toast({
-      title: 'Order Closed',
-      description: 'Payment created. Please process payment.',
-    });
+  const getStatusBadge = (status: OrderStatus) => {
+    const config = {
+      OPEN: { variant: 'default' as const, label: 'Open' },
+      PAID: { variant: 'secondary' as const, label: 'Paid' },
+      CANCELLED: { variant: 'destructive' as const, label: 'Cancelled' },
+    };
+    return <Badge variant={config[status].variant}>{config[status].label}</Badge>;
   };
 
   return (
@@ -109,30 +124,30 @@ export default function OrdersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Orders</h1>
-          <p className="text-slate-600 dark:text-slate-400">Manage customer orders</p>
+          <p className="text-slate-600 dark:text-slate-400">Manage table orders</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Button className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
-              New Order
+              Create Order
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl dark:border-slate-800 dark:bg-slate-900 dark:text-white">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create New Order</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Select Booking</Label>
-                <Select value={selectedBooking} onValueChange={setSelectedBooking}>
-                  <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800">
-                    <SelectValue placeholder="Select a booking" />
+                <Label htmlFor="tableId">Table</Label>
+                <Select value={selectedTableId} onValueChange={setSelectedTableId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select table" />
                   </SelectTrigger>
-                  <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
-                    {activeBookings.map((booking) => (
-                      <SelectItem key={booking.id} value={booking.id}>
-                        {booking.tableName} - {booking.customerName}
+                  <SelectContent>
+                    {(tables || []).filter(t => t.status === 'PLAYING').map((table) => (
+                      <SelectItem key={table.id} value={table.id}>
+                        {table.code} - {table.type}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -142,29 +157,24 @@ export default function OrdersPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Order Items</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleAddOrderItem}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
+                  <Button size="sm" variant="outline" onClick={handleAddOrderItem}>
+                    <Plus className="h-3 w-3 mr-1" />
                     Add Item
                   </Button>
                 </div>
 
                 {orderItems.map((item, index) => (
-                  <div key={index} className="flex gap-2 items-end">
-                    <div className="flex-1 space-y-2">
+                  <div key={index} className="flex gap-2 items-start">
+                    <div className="flex-1">
                       <Select
                         value={item.menuItemId}
                         onValueChange={(value) => handleUpdateOrderItem(index, 'menuItemId', value)}
                       >
-                        <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800">
+                        <SelectTrigger>
                           <SelectValue placeholder="Select item" />
                         </SelectTrigger>
-                        <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
-                          {menuItems.map((menuItem) => (
+                        <SelectContent>
+                          {(menuItems || []).filter(m => m.isAvailable).map((menuItem) => (
                             <SelectItem key={menuItem.id} value={menuItem.id}>
                               {menuItem.name} - {menuItem.price.toLocaleString()}đ
                             </SelectItem>
@@ -172,56 +182,36 @@ export default function OrdersPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="w-24 space-y-2">
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => handleUpdateOrderItem(index, 'quantity', parseInt(e.target.value))}
-                        className="dark:border-slate-700 dark:bg-slate-800"
-                      />
-                    </div>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => handleUpdateOrderItem(index, 'quantity', parseInt(e.target.value))}
+                      className="w-20"
+                    />
                     <Button
-                      type="button"
                       size="icon"
-                      variant="ghost"
+                      variant="destructive"
                       onClick={() => handleRemoveOrderItem(index)}
-                      className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
 
-                {orderItems.length === 0 && (
-                  <div className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">
-                    No items added yet
+                {orderItems.length > 0 && (
+                  <div className="pt-3 border-t">
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>Total:</span>
+                      <span>{calculateTotal().toLocaleString()}đ</span>
+                    </div>
                   </div>
                 )}
               </div>
-
-              {orderItems.length > 0 && (
-                <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Total:</span>
-                    <span className="text-2xl font-bold text-emerald-500">
-                      {calculateTotal().toLocaleString()}đ
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleCreateOrder} className="bg-emerald-600 hover:bg-emerald-700">
-                Create Order
-              </Button>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateOrder}>Create Order</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -234,57 +224,40 @@ export default function OrdersPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50">
-                <TableHead className="text-slate-600 dark:text-slate-400">Order ID</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Table</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Items</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Total</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Status</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Time</TableHead>
-                <TableHead className="text-slate-600 dark:text-slate-400">Actions</TableHead>
+              <TableRow>
+                <TableHead>Order ID</TableHead>
+                <TableHead>Table</TableHead>
+                <TableHead>Items</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => (
-                <TableRow
-                  key={order.id}
-                  className="border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50"
-                >
-                  <TableCell className="font-mono text-sm text-slate-900 dark:text-white">
-                    #{order.id.substring(0, 8)}
-                  </TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-300">{order.tableName}</TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-300">
-                    <div className="space-y-1">
-                      {order.items.map((item, i) => (
-                        <div key={i} className="text-xs">
-                          {item.quantity}x {item.menuItemName}
-                        </div>
-                      ))}
+              {(orders || []).map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-mono text-xs">{order.id.slice(0, 8)}...</TableCell>
+                  <TableCell className="font-medium">{order.table?.code || order.tableId}</TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {order.items?.length || 0} items
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium text-slate-900 dark:text-white">
-                    {order.totalPrice.toLocaleString()}đ
+                  <TableCell className="font-semibold">{order.total.toLocaleString()}đ</TableCell>
+                  <TableCell>{getStatusBadge(order.status)}</TableCell>
+                  <TableCell className="text-sm text-slate-600">
+                    {new Date(order.createdAt).toLocaleString('vi-VN')}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={order.status === 'open' ? 'default' : 'secondary'}
-                      className={order.status === 'open' ? 'bg-emerald-500' : 'bg-slate-500'}
-                    >
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-slate-600 dark:text-slate-300">
-                    {new Date(order.createdAt).toLocaleTimeString()}
-                  </TableCell>
-                  <TableCell>
-                    {order.status === 'open' && (
+                    {order.status === 'OPEN' && (
                       <Button
                         size="sm"
-                        onClick={() => handleCloseOrder(order)}
-                        className="bg-blue-600 hover:bg-blue-700"
+                        variant="outline"
+                        onClick={() => handleCloseOrder(order.id)}
+                        disabled={actioningId === order.id}
                       >
-                        Close Order
+                        Close
                       </Button>
                     )}
                   </TableCell>
@@ -292,13 +265,41 @@ export default function OrdersPage() {
               ))}
             </TableBody>
           </Table>
-          {orders.length === 0 && (
-            <div className="py-12 text-center text-slate-600 dark:text-slate-400">
-              No orders yet
+
+          {(!orders || orders.length === 0) && (
+            <div className="text-center py-12 text-slate-600 dark:text-slate-400">
+              No orders found
             </div>
           )}
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold text-green-500 mb-1">
+              {(orders || []).filter(o => o.status === 'OPEN').length}
+            </div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">Open Orders</div>
+          </CardContent>
+        </Card>
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold text-blue-500 mb-1">
+              {(orders || []).filter(o => o.status === 'PAID').length}
+            </div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">Paid</div>
+          </CardContent>
+        </Card>
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold text-blue-600 mb-1">
+              {(orders || []).reduce((sum, o) => sum + o.total, 0).toLocaleString()}đ
+            </div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">Total Revenue</div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

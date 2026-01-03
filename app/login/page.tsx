@@ -1,50 +1,29 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/lib/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CircleDot } from 'lucide-react';
 import Link from 'next/link';
-import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('admin');
-  const router = useRouter();
-  const login = useAppStore((state) => state.login);
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = login(email, password, role);
+    setIsLoading(true);
 
-    if (result.success) {
-      if (role === 'admin' || role === 'staff') {
-        router.push('/admin');
-      } else {
-        router.push('/');
-      }
-      return;
-    }
-
-    if (result.error === 'banned') {
-      toast({
-        title: 'Account banned',
-        description: 'This account has been banned. Please contact the administrator for support.',
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Login failed',
-        description: 'Invalid email or password. Please try again.',
-        variant: 'destructive',
-      });
+    try {
+      await login({ email, password });
+    } catch (error) {
+      // Error handling is done in auth context
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -59,7 +38,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">CueMaster</CardTitle>
           <CardDescription className="text-slate-600 dark:text-slate-400">
-            Sign in to your account
+            Đăng nhập vào hệ thống
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -73,11 +52,12 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
                 className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-700 dark:text-slate-200">Password</Label>
+              <Label htmlFor="password" className="text-slate-700 dark:text-slate-200">Mật khẩu</Label>
               <Input
                 id="password"
                 type="password"
@@ -85,33 +65,22 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
                 className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role" className="text-slate-700 dark:text-slate-200">Role</Label>
-              <Select value={role} onValueChange={setRole}>
-                <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                  <SelectItem value="customer">Customer</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <Button
               type="submit"
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={isLoading}
             >
-              Sign In
+              {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">
-            Don't have an account?{' '}
+            Chưa có tài khoản?{' '}
             <Link href="/register" className="text-emerald-500 hover:text-emerald-400">
-              Register
+              Đăng ký ngay
             </Link>
           </div>
         </CardContent>

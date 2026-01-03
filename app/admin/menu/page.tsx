@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useMenu } from '@/lib/hooks/use-menu';
+import { menuApi } from '@/lib/api/menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
@@ -9,26 +10,49 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
-import { MenuCategory, MenuItem } from '@/lib/types';
+import { MenuItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { PageSkeleton } from '@/components/loaders/page-skeleton';
 import Image from 'next/image';
 
+const CATEGORIES = ['Food', 'Beverage', 'Snack', 'Dessert'];
+
 export default function MenuPage() {
-  const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem } = useAppStore();
+  const { menuItems, isLoading, isError, mutate } = useMenu();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
-  const [filterCategory, setFilterCategory] = useState<MenuCategory | 'all'>('all');
+  const [filterCategory, setFilterCategory] = useState<string | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [actioningId, setActioningId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     name: '',
-    category: 'Food' as MenuCategory,
+    category: 'Food',
     price: '',
-    stock: '',
     description: '',
     image: '',
+  });
+
+  if (isLoading) return <PageSkeleton />;
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-red-500 text-lg mb-2">Failed to load menu items</p>
+          <Button onClick={() => mutate()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredItems = (menuItems || []).filter((item) => {
+    const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
   });
 
   const handleOpenDialog = (item?: MenuItem) => {
@@ -38,9 +62,8 @@ export default function MenuPage() {
         name: item.name,
         category: item.category,
         price: item.price.toString(),
-        stock: item.stock.toString(),
-        description: item.description,
-        image: item.image,
+        description: item.description || '',
+        image: item.image || '',
       });
     } else {
       setEditingItem(null);
@@ -48,7 +71,6 @@ export default function MenuPage() {
         name: '',
         category: 'Food',
         price: '',
-        stock: '',
         description: '',
         image: '',
       });
@@ -56,154 +78,81 @@ export default function MenuPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSave = () => {
-    if (!formData.name || !formData.price || !formData.stock) {
-      toast({
-        title: 'Error',
-        description: 'Please fill all required fields',
-        variant: 'destructive',
-      });
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.price) {
+      toast({ title: 'Error', description: 'Please fill required fields', variant: 'destructive' });
       return;
     }
 
-    const itemData = {
-      name: formData.name,
-      category: formData.category,
-      price: parseFloat(formData.price),
-      stock: parseInt(formData.stock),
-      description: formData.description,
-      image: formData.image || 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
-    };
+    try {
+      const data = {
+        name: formData.name,
+        category: formData.category,
+        price: parseFloat(formData.price),
+        description: formData.description || null,
+        image: formData.image || null,
+      };
 
-    if (editingItem) {
-      updateMenuItem(editingItem.id, itemData);
-      toast({
-        title: 'Success',
-        description: 'Menu item updated',
-      });
-    } else {
-      addMenuItem(itemData);
-      toast({
-        title: 'Success',
-        description: 'Menu item added',
-      });
+      if (editingItem) {
+        await menuApi.update(editingItem.id, data);
+        toast({ title: 'Success', description: 'Menu item updated' });
+      } else {
+        await menuApi.create(data);
+        toast({ title: 'Success', description: 'Menu item created' });
+      }
+
+      await mutate();
+      setIsDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
-
-    setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    deleteMenuItem(id);
-    toast({
-      title: 'Deleted',
-      description: 'Menu item removed',
-    });
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+
+    try {
+      setActioningId(id);
+      await menuApi.delete(id);
+      await mutate();
+      toast({ title: 'Success', description: 'Menu item deleted' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setActioningId(null);
+    }
   };
 
-  const filteredItems = menuItems.filter((item) => {
-    const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const handleToggleAvailability = async (id: string) => {
+    try {
+      setActioningId(id);
+      await menuApi.toggleAvailability(id);
+      await mutate();
+      toast({ title: 'Success', description: 'Availability updated' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setActioningId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Menu Management</h1>
-          <p className="text-slate-600 dark:text-slate-400">Manage food, drinks, and services</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Menu</h1>
+          <p className="text-slate-600 dark:text-slate-400">Manage menu items</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()} className="bg-emerald-600 hover:bg-emerald-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md dark:border-slate-800 dark:bg-slate-900 dark:text-white">
-            <DialogHeader>
-              <DialogTitle>{editingItem ? 'Edit Item' : 'Add New Item'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="dark:border-slate-700 dark:bg-slate-800"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value as MenuCategory })}>
-                  <SelectTrigger className="dark:border-slate-700 dark:bg-slate-800">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
-                    <SelectItem value="Food">Food</SelectItem>
-                    <SelectItem value="Drink">Drink</SelectItem>
-                    <SelectItem value="Service">Service</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Price (đ)</Label>
-                  <Input
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="dark:border-slate-700 dark:bg-slate-800"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Stock</Label>
-                  <Input
-                    type="number"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    className="dark:border-slate-700 dark:bg-slate-800"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="dark:border-slate-700 dark:bg-slate-800"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Image URL</Label>
-                <Input
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  placeholder="https://..."
-                  className="dark:border-slate-700 dark:bg-slate-800"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700">
-                {editingItem ? 'Update' : 'Add'} Item
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => handleOpenDialog()}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Item
+        </Button>
       </div>
 
       <Card className="dark:border-slate-800 dark:bg-slate-900">
         <CardHeader>
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <CardTitle className="text-slate-900 dark:text-white">Menu Items</CardTitle>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <CardTitle className="text-slate-900 dark:text-white">All Items</CardTitle>
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -214,15 +163,15 @@ export default function MenuPage() {
                   className="pl-10 w-full sm:w-64 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
-              <Select value={filterCategory} onValueChange={(value) => setFilterCategory(value as any)}>
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
                 <SelectTrigger className="w-full sm:w-40 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="dark:border-slate-700 dark:bg-slate-800">
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="Food">Food</SelectItem>
-                  <SelectItem value="Drink">Drink</SelectItem>
-                  <SelectItem value="Service">Service</SelectItem>
+                  {CATEGORIES.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -231,63 +180,145 @@ export default function MenuPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-lg border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-lg dark:border-slate-700 dark:bg-slate-800"
-              >
-                <div className="relative h-40 w-full bg-slate-200 dark:bg-slate-700">
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-4 space-y-3">
-                  <div>
-                    <h3 className="mb-1 font-semibold text-slate-900 dark:text-white">{item.name}</h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">{item.category}</p>
-                  </div>
-                  <p className="text-sm text-slate-600 line-clamp-2 dark:text-slate-300">{item.description}</p>
-                  <div className="flex items-center justify-between border-t border-slate-200 pt-2 dark:border-slate-700">
-                    <div>
-                      <div className="text-lg font-bold text-emerald-500">
-                        {item.price.toLocaleString()}đ
-                      </div>
-                      <div className="text-xs text-slate-600 dark:text-slate-400">
-                        Stock: {item.stock}
-                      </div>
+              <Card key={item.id} className="dark:border-slate-700 dark:bg-slate-800 overflow-hidden">
+                <div className="relative h-40 bg-slate-200 dark:bg-slate-700">
+                  {item.image ? (
+                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-slate-400">
+                      No image
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleOpenDialog(item)}
-                        className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDelete(item.id)}
-                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                  )}
+                  <div className="absolute top-2 right-2">
+                    <Badge variant={item.isAvailable ? 'default' : 'secondary'}>
+                      {item.isAvailable ? 'Available' : 'Unavailable'}
+                    </Badge>
                   </div>
                 </div>
-              </div>
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-lg mb-1 dark:text-white">{item.name}</h3>
+                  <Badge variant="outline" className="mb-2">{item.category}</Badge>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 line-clamp-2">
+                    {item.description || 'No description'}
+                  </p>
+                  <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-3">
+                    {item.price.toLocaleString()}đ
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleOpenDialog(item)}
+                      disabled={actioningId === item.id}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={item.isAvailable ? 'secondary' : 'default'}
+                      onClick={() => handleToggleAvailability(item.id)}
+                      disabled={actioningId === item.id}
+                    >
+                      {item.isAvailable ? 'Disable' : 'Enable'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDelete(item.id)}
+                      disabled={actioningId === item.id}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
+
           {filteredItems.length === 0 && (
-            <div className="py-12 text-center text-slate-600 dark:text-slate-400">
+            <div className="text-center py-12 text-slate-600 dark:text-slate-400">
               No items found
             </div>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? 'Edit Menu Item' : 'Add Menu Item'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="price">Price (VND) *</Label>
+              <Input
+                id="price"
+                type="number"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="image">Image URL</Label>
+              <Input
+                id="image"
+                value={formData.image}
+                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmit}>{editingItem ? 'Update' : 'Create'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {CATEGORIES.map((cat) => (
+          <Card key={cat} className="dark:border-slate-800 dark:bg-slate-900">
+            <CardContent className="pt-6">
+              <div className="text-3xl font-bold text-blue-500 mb-1">
+                {(menuItems || []).filter(i => i.category === cat).length}
+              </div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">{cat}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

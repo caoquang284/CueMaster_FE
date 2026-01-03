@@ -3,28 +3,91 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
-import { mockDailyRevenue, mockTableUsage } from '@/lib/mock-data';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
+import { usePayments } from '@/lib/hooks/use-payments';
+import { useBookings } from '@/lib/hooks/use-bookings';
+import { useTables } from '@/lib/hooks/use-tables';
+import { useMemo } from 'react';
+import { PageSkeleton } from '@/components/loaders/page-skeleton';
 
 export default function ReportsPage() {
   const { toast } = useToast();
+  const { payments, isLoading: paymentsLoading } = usePayments();
+  const { bookings, isLoading: bookingsLoading } = useBookings();
+  const { tables, isLoading: tablesLoading } = useTables();
 
-  const weeklyBookings = [
-    { day: 'Mon', bookings: 12 },
-    { day: 'Tue', bookings: 15 },
-    { day: 'Wed', bookings: 20 },
-    { day: 'Thu', bookings: 18 },
-    { day: 'Fri', bookings: 25 },
-    { day: 'Sat', bookings: 35 },
-    { day: 'Sun', bookings: 30 },
-  ];
+  // Calculate daily revenue from last 7 days
+  const dailyRevenue = useMemo(() => {
+    if (!payments) return [];
+    
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i));
+      return date.toISOString().split('T')[0];
+    });
 
-  const tableTypeDistribution = [
-    { name: 'Pool', value: 40 },
-    { name: 'Snooker', value: 35 },
-    { name: 'Carom', value: 25 },
-  ];
+    return last7Days.map(date => ({
+      date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      revenue: payments
+        .filter(p => p.createdAt.startsWith(date) && p.status === 'PAID')
+        .reduce((sum, p) => sum + p.total, 0)
+    }));
+  }, [payments]);
+
+  // Calculate table usage from bookings
+  const tableUsage = useMemo(() => {
+    if (!bookings || !tables) return [];
+    
+    const usageMap = new Map<string, { tableName: string; usageCount: number }>();
+    
+    bookings.forEach(booking => {
+      const table = tables.find(t => t.id === booking.tableId);
+      if (table) {
+        const current = usageMap.get(table.id) || { tableName: table.code, usageCount: 0 };
+        usageMap.set(table.id, { ...current, usageCount: current.usageCount + 1 });
+      }
+    });
+    
+    return Array.from(usageMap.values()).sort((a, b) => b.usageCount - a.usageCount);
+  }, [bookings, tables]);
+
+  if (paymentsLoading || bookingsLoading || tablesLoading) {
+    return <PageSkeleton />;
+  }
+
+  // Weekly bookings trend
+  const weeklyBookings = useMemo(() => {
+    if (!bookings) return [];
+    
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const counts = new Array(7).fill(0);
+    
+    bookings.forEach(booking => {
+      const dayOfWeek = new Date(booking.startTime).getDay();
+      counts[dayOfWeek]++;
+    });
+    
+    return daysOfWeek.map((day, index) => ({
+      day,
+      bookings: counts[index]
+    }));
+  }, [bookings]);
+
+  // Table type distribution
+  const tableTypeDistribution = useMemo(() => {
+    if (!tables) return [];
+    
+    const typeCounts = tables.reduce((acc, table) => {
+      acc[table.type] = (acc[table.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(typeCounts).map(([name, value]) => ({
+      name,
+      value
+    }));
+  }, [tables]);
 
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b'];
 
@@ -55,7 +118,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockDailyRevenue}>
+              <LineChart data={dailyRevenue}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis
                   dataKey="date"
@@ -94,7 +157,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockTableUsage.slice(0, 3)}>
+              <BarChart data={tableUsage.slice(0, 3)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis
                   dataKey="tableName"
@@ -188,32 +251,36 @@ export default function ReportsPage() {
           <CardContent className="pt-6">
             <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Avg Revenue/Day</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              {(mockDailyRevenue.reduce((sum, d) => sum + d.revenue, 0) / mockDailyRevenue.length).toLocaleString()}đ
+              {dailyRevenue.length > 0 
+                ? (dailyRevenue.reduce((sum, d) => sum + d.revenue, 0) / dailyRevenue.length).toLocaleString('vi-VN', { maximumFractionDigits: 0 })
+                : '0'}đ
             </div>
-            <div className="text-xs text-emerald-500 mt-1">+8.5% vs last week</div>
+            <div className="text-xs text-emerald-500 mt-1">Last 7 days</div>
           </CardContent>
         </Card>
         <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
-            <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Avg Bookings/Day</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Total Bookings</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              {Math.round(weeklyBookings.reduce((sum, d) => sum + d.bookings, 0) / weeklyBookings.length)}
+              {bookings?.length || 0}
             </div>
-            <div className="text-xs text-blue-500 mt-1">+12% vs last week</div>
+            <div className="text-xs text-blue-500 mt-1">All time</div>
           </CardContent>
         </Card>
         <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
-            <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Peak Day</div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white">Saturday</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">35 bookings</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Total Tables</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">{tables?.length || 0}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Active tables</div>
           </CardContent>
         </Card>
         <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
-            <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Occupancy Rate</div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white">68%</div>
-            <div className="text-xs text-emerald-500 mt-1">+5% vs last week</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Total Revenue</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">
+              {(payments?.filter(p => p.status === 'PAID').reduce((sum, p) => sum + p.total, 0) || 0).toLocaleString()}đ
+            </div>
+            <div className="text-xs text-emerald-500 mt-1">All time</div>
           </CardContent>
         </Card>
       </div>
