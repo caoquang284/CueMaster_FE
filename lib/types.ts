@@ -33,13 +33,16 @@ export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 
 export interface Booking {
   id: string;
-  userId: string;
+  userId: string | null;
   tableId: string;
   startTime: string;
   endTime: string;
   totalPrice: number;
   status: BookingStatus;
   reminderSent: boolean;
+  guestName: string | null;
+  guestEmail: string | null;
+  guestPhone: string | null;
   createdAt: string;
   updatedAt: string;
   user?: User;

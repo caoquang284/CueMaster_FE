@@ -6,7 +6,7 @@ import { Notification } from '../types';
 
 export function useNotifications() {
   const { data, error, isLoading, mutate } = useSWR<Notification[]>(
-    '/notifications',
+    '/notifications/my',
     () => notificationsApi.getAll(),
     { refreshInterval: 5000 } // Refresh every 5 seconds
   );
@@ -21,7 +21,7 @@ export function useNotifications() {
 
 export function useUnreadCount() {
   const { data, error, isLoading, mutate } = useSWR<number>(
-    '/notifications/unread/count',
+    '/notifications/my/unread-count',
     () => notificationsApi.getUnreadCount(),
     { refreshInterval: 10000 } // Refresh every 10 seconds
   );

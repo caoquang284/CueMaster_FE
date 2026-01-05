@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { useBookings } from '@/lib/hooks/use-bookings';
+import { useBookings, usePendingBookingsCount } from '@/lib/hooks/use-bookings';
 import { useTables } from '@/lib/hooks/use-tables';
 import { bookingsApi } from '@/lib/api/bookings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,15 +12,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
 import { BookingStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PageSkeleton } from '@/components/loaders/page-skeleton';
 
 export default function BookingsPage() {
   const { bookings, isLoading, isError, mutate } = useBookings();
+  const { mutate: mutatePendingCount } = usePendingBookingsCount();
   const { tables } = useTables();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [detailBooking, setDetailBooking] = useState<any>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -74,7 +76,7 @@ export default function BookingsPage() {
     try {
       setActioningId(id);
       await bookingsApi.confirm(id);
-      await mutate();
+      await Promise.all([mutate(), mutatePendingCount()]);
       toast({ title: 'Success', description: 'Booking confirmed' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -87,7 +89,7 @@ export default function BookingsPage() {
     try {
       setActioningId(id);
       await bookingsApi.cancel(id);
-      await mutate();
+      await Promise.all([mutate(), mutatePendingCount()]);
       toast({ title: 'Success', description: 'Booking cancelled' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -100,7 +102,7 @@ export default function BookingsPage() {
     try {
       setActioningId(id);
       await bookingsApi.complete(id);
-      await mutate();
+      await Promise.all([mutate(), mutatePendingCount()]);
       toast({ title: 'Success', description: 'Booking completed' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -202,7 +204,7 @@ export default function BookingsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Table</TableHead>
-                <TableHead>User</TableHead>
+                <TableHead>Customer</TableHead>
                 <TableHead>Start Time</TableHead>
                 <TableHead>End Time</TableHead>
                 <TableHead>Total Price</TableHead>
@@ -211,16 +213,37 @@ export default function BookingsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(bookings || []).map((booking) => (
+              {(bookings || []).map((booking) => {
+                const isGuest = !booking.userId;
+                const customerName = isGuest 
+                  ? (booking.guestName || 'Guest') 
+                  : (booking.user?.name || 'Customer');
+                
+                return (
                 <TableRow key={booking.id}>
                   <TableCell className="font-medium">{booking.table?.code || booking.tableId}</TableCell>
-                  <TableCell>{booking.user?.name || booking.userId}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span>{customerName}</span>
+                      <Badge variant={isGuest ? "secondary" : "default"} className="text-xs">
+                        {isGuest ? "Guest" : "Customer"}
+                      </Badge>
+                    </div>
+                  </TableCell>
                   <TableCell>{formatDateTime(booking.startTime)}</TableCell>
                   <TableCell>{formatDateTime(booking.endTime)}</TableCell>
                   <TableCell>{booking.totalPrice.toLocaleString()}đ</TableCell>
                   <TableCell>{getStatusBadge(booking.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setDetailBooking(booking)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
                       {booking.status === 'PENDING' && (
                         <>
                           <Button
@@ -257,7 +280,8 @@ export default function BookingsPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
 
@@ -303,6 +327,126 @@ export default function BookingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Booking Detail Dialog */}
+      <Dialog open={!!detailBooking} onOpenChange={() => setDetailBooking(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Booking Details #{detailBooking?.id.slice(0, 8)}</DialogTitle>
+          </DialogHeader>
+          {detailBooking && (
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left Column - Customer & Booking Info */}
+              <div className="space-y-6">
+                {/* Customer Information */}
+                <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-lg">Customer Information</h3>
+                    <Badge variant={!detailBooking.userId ? "secondary" : "default"}>
+                      {!detailBooking.userId ? "Guest" : "Registered"}
+                    </Badge>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs text-slate-500">Name</Label>
+                      <p className="font-medium">{!detailBooking.userId ? (detailBooking.guestName || 'N/A') : (detailBooking.user?.name || 'N/A')}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500">Email</Label>
+                      <p className="font-medium">{!detailBooking.userId ? (detailBooking.guestEmail || 'N/A') : (detailBooking.user?.email || 'N/A')}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500">Phone</Label>
+                      <p className="font-medium">{detailBooking.guestPhone || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Information */}
+                <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
+                  <h3 className="font-semibold text-lg mb-4">Booking Information</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-xs text-slate-500">Table</Label>
+                      <p className="font-bold text-lg">{detailBooking.table?.code} - {detailBooking.table?.type}</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <Label className="text-xs text-slate-500">Rate</Label>
+                      <p className="font-medium">{detailBooking.table?.priceHour?.toLocaleString()}đ/hour</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <Label className="text-xs text-slate-500">Duration</Label>
+                      <p className="font-medium">
+                        {((new Date(detailBooking.endTime).getTime() - new Date(detailBooking.startTime).getTime()) / (1000 * 60 * 60)).toFixed(1)}h
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <Label className="text-xs text-slate-500">Status</Label>
+                      {getStatusBadge(detailBooking.status)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Schedule & Payment */}
+              <div className="space-y-6">
+                {/* Schedule */}
+                <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
+                  <h3 className="font-semibold text-lg mb-4">Schedule</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs text-slate-500">Start Time</Label>
+                      <p className="font-medium text-base">{formatDateTime(detailBooking.startTime)}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500">End Time</Label>
+                      <p className="font-medium text-base">{formatDateTime(detailBooking.endTime)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Summary */}
+                <div className="border rounded-lg p-4 bg-emerald-50 dark:bg-emerald-950">
+                  <h3 className="font-semibold text-lg mb-4">Payment Summary</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Table Cost</span>
+                      <span className="font-medium">{detailBooking.totalPrice.toLocaleString()}đ</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Services</span>
+                      <span className="font-medium">0đ</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between items-center">
+                      <span className="font-semibold text-lg">Total</span>
+                      <span className="font-bold text-2xl text-emerald-600 dark:text-emerald-400">
+                        {detailBooking.totalPrice.toLocaleString()}đ
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Timestamps */}
+                <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <Label className="text-xs text-slate-500">Created</Label>
+                      <p className="font-medium">{new Date(detailBooking.createdAt).toLocaleDateString('vi-VN')}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500">Updated</Label>
+                      <p className="font-medium">{new Date(detailBooking.updatedAt).toLocaleDateString('vi-VN')}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailBooking(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

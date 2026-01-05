@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { useNotifications } from '@/lib/hooks/use-notifications';
+import { useNotifications, useUnreadCount } from '@/lib/hooks/use-notifications';
 import { notificationsApi } from '@/lib/api/notifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,8 @@ import { PageSkeleton } from '@/components/loaders/page-skeleton';
 import { Notification } from '@/lib/types';
 
 export default function NotificationsPage() {
-  const { notifications, unreadCount, isLoading, isError, mutate } = useNotifications();
+  const { notifications, isLoading, isError, mutate } = useNotifications();
+  const { count: unreadCount, mutate: mutateUnreadCount } = useUnreadCount();
   const [actioningId, setActioningId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -33,7 +34,7 @@ export default function NotificationsPage() {
     try {
       setActioningId(id);
       await notificationsApi.markAsRead(id);
-      await mutate();
+      await Promise.all([mutate(), mutateUnreadCount()]);
       toast({ title: 'Success', description: 'Marked as read' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -45,7 +46,7 @@ export default function NotificationsPage() {
   const handleMarkAllAsRead = async () => {
     try {
       await notificationsApi.markAllAsRead();
-      await mutate();
+      await Promise.all([mutate(), mutateUnreadCount()]);
       toast({ title: 'Success', description: 'All notifications marked as read' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -58,7 +59,7 @@ export default function NotificationsPage() {
     try {
       setActioningId(id);
       await notificationsApi.delete(id);
-      await mutate();
+      await Promise.all([mutate(), mutateUnreadCount()]);
       toast({ title: 'Success', description: 'Notification deleted' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -84,7 +85,7 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2 dark:text-white">Notifications</h1>
           <p className="text-slate-600 dark:text-slate-400">
-            {unreadCount > 0 ? `You have ${unreadCount} unread notifications` : 'All caught up!'}
+            {unreadCount && unreadCount > 0 ? `You have ${unreadCount} unread notifications` : 'All caught up!'}
           </p>
         </div>
         {(notifications || []).some(n => !n.isRead) && (

@@ -18,6 +18,21 @@ export function useBookings() {
   };
 }
 
+export function usePendingBookingsCount() {
+  const { data, error, isLoading, mutate } = useSWR<number>(
+    '/bookings/pending/count',
+    () => bookingsApi.getPendingCount(),
+    { refreshInterval: 5000 } // Refresh every 5 seconds
+  );
+
+  return {
+    count: data,
+    isLoading,
+    isError: error,
+    mutate,
+  };
+}
+
 export function useBooking(id: string | null) {
   const { data, error, isLoading, mutate } = useSWR<Booking>(
     id ? `/bookings/${id}` : null,

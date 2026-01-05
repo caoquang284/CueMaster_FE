@@ -29,7 +29,11 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => {
     // Return the data from the standardized response format
-    return response.data.data || response.data;
+    // Backend wraps response in { success, data, timestamp }
+    if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+      return response.data.data;
+    }
+    return response.data;
   },
   (error) => {
     if (error.response) {

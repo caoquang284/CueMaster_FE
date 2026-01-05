@@ -30,6 +30,12 @@ export const bookingsApi = {
     return response;
   },
 
+  // Get pending bookings count
+  getPendingCount: async (): Promise<number> => {
+    const response = await apiClient.get<{ count: number }>('/bookings/pending/count');
+    return response.count;
+  },
+
   // Get booking by ID
   getById: async (id: string): Promise<Booking> => {
     const response: Booking = await apiClient.get(`/bookings/${id}`);
