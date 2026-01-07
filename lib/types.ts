@@ -129,3 +129,32 @@ export interface TableUsage {
   tableName: string;
   usageCount: number;
 }
+
+// Timeline Booking types
+export interface TimelineBooking {
+  id: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  totalPrice: number;
+  customerName: string;
+  isGuest: boolean;
+  guestPhone?: string | null;
+  guestEmail?: string | null;
+}
+
+export interface TimelineTable {
+  id: string;
+  code: string;
+  type: string;
+  status: string;
+  priceHour: number;
+  bookings: TimelineBooking[];
+}
+
+export interface TimelineResponse {
+  date: string;
+  tables: TimelineTable[];
+  timeSlots: string[]; // Array of time slots like ['08:00', '09:00', ...]
+}
+

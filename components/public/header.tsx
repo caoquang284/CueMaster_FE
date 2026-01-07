@@ -30,6 +30,12 @@ export function PublicHeader() {
               Tables
             </Link>
             <Link
+              href="/#booking-timeline"
+              className="font-semibold text-emerald-600 transition-colors hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400"
+            >
+              📅 Đặt bàn
+            </Link>
+            <Link
               href="/#menu"
               className="text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
             >

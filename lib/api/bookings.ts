@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { Booking } from '../types';
+import { Booking, TimelineResponse } from '../types';
 
 export interface CreateBookingDto {
   userId: string;
@@ -32,8 +32,8 @@ export const bookingsApi = {
 
   // Get pending bookings count
   getPendingCount: async (): Promise<number> => {
-    const response = await apiClient.get<{ count: number }>('/bookings/pending/count');
-    return response.count;
+    const response: any = await apiClient.get('/bookings/pending/count');
+    return response.count || 0;
   },
 
   // Get booking by ID
@@ -81,6 +81,13 @@ export const bookingsApi = {
   // Complete booking (Admin/Staff)
   complete: async (id: string): Promise<Booking> => {
     const response: Booking = await apiClient.patch(`/bookings/${id}/complete`, {});
+    return response;
+  },
+
+  // Get timeline view for bookings
+  getTimeline: async (date?: string): Promise<TimelineResponse> => {
+    const url = date ? `/bookings/timeline?date=${date}` : '/bookings/timeline';
+    const response: TimelineResponse = await apiClient.get(url);
     return response;
   },
 };

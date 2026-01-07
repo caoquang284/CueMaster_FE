@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { bookingsApi } from '../api/bookings';
-import { Booking } from '../types';
+import { Booking, TimelineResponse } from '../types';
 
 export function useBookings() {
   const { data, error, isLoading, mutate } = useSWR<Booking[]>(
@@ -36,7 +36,7 @@ export function usePendingBookingsCount() {
 export function useBooking(id: string | null) {
   const { data, error, isLoading, mutate } = useSWR<Booking>(
     id ? `/bookings/${id}` : null,
-    () => id ? bookingsApi.getById(id) : null
+    id ? () => bookingsApi.getById(id) : null
   );
 
   return {
@@ -50,7 +50,7 @@ export function useBooking(id: string | null) {
 export function useUserBookings(userId: string | null) {
   const { data, error, isLoading, mutate } = useSWR<Booking[]>(
     userId ? `/bookings/user/${userId}` : null,
-    () => userId ? bookingsApi.getByUserId(userId) : null
+    userId ? () => bookingsApi.getByUserId(userId) : null
   );
 
   return {
@@ -60,3 +60,19 @@ export function useUserBookings(userId: string | null) {
     mutate,
   };
 }
+
+export function useBookingTimeline(date?: string) {
+  const { data, error, isLoading, mutate } = useSWR<TimelineResponse>(
+    date ? `/bookings/timeline?date=${date}` : '/bookings/timeline',
+    () => bookingsApi.getTimeline(date),
+    { refreshInterval: 10000 } // Refresh every 10 seconds
+  );
+
+  return {
+    timeline: data,
+    isLoading,
+    isError: error,
+    mutate,
+  };
+}
+

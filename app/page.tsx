@@ -9,13 +9,16 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CalendarDays, Clock, CircleDot, Sparkles, UtensilsCrossed } from 'lucide-react';
+import { CalendarDays, Clock, CircleDot, Sparkles, UtensilsCrossed, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { tablesApi, menuApi, bookingsApi } from '@/lib/api';
 import type { CreatePublicBookingDto } from '@/lib/api/bookings';
 import { Table, MenuItem, Booking } from '@/lib/types';
+import { useBookingTimeline } from '@/lib/hooks/use-bookings';
+import { GanttTimelineView } from '@/components/bookings/gantt-timeline-view';
+import { PreciseBookingDialog } from '@/components/bookings/precise-booking-dialog';
 
 export default function Home() {
   const [realtimeUpdate, setRealtimeUpdate] = useState(0);
@@ -27,6 +30,23 @@ export default function Home() {
   const [tables, setTables] = useState<Table[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Timeline state
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const { timeline, isLoading: timelineLoading, mutate: mutateTimeline } = useBookingTimeline(selectedDate);
+
+  // Precise booking dialog state
+  const [preciseBookingDialog, setPreciseBookingDialog] = useState({
+    open: false,
+    tableId: '',
+    tableCode: '',
+    tablePriceHour: 0,
+    initialHour: 0,
+    initialMinute: 0,
+  });
 
   const [bookingForm, setBookingForm] = useState({
     selectedTableId: '',
@@ -388,6 +408,114 @@ export default function Home() {
         </div>
       </section>
 
+      {/* TIMELINE BOOKING SECTION - NEW */}
+      <section id="booking-timeline" className="py-16 bg-slate-50 dark:bg-slate-900">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4 dark:text-white">
+              📅 Booking Timeline
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400">
+              View real-time booking schedule and reserve your table
+            </p>
+          </div>
+
+          {/* Date Navigation */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                const current = new Date(selectedDate);
+                current.setDate(current.getDate() - 1);
+                setSelectedDate(current.toISOString().split('T')[0]);
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-3">
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-auto max-w-[200px]"
+              />
+              {selectedDate === new Date().toISOString().split('T')[0] && (
+                <Badge variant="default">Hôm nay</Badge>
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                const current = new Date(selectedDate);
+                current.setDate(current.getDate() + 1);
+                setSelectedDate(current.toISOString().split('T')[0]);
+              }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => mutateTimeline()}
+              title="Refresh"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Timeline Grid */}
+          {timelineLoading ? (
+            <div className="text-center py-12 text-slate-600 dark:text-slate-400">
+              Loading timeline...
+            </div>
+          ) : timeline ? (
+            <GanttTimelineView
+              tables={timeline.tables}
+              selectedDate={selectedDate}
+              showPersonalInfo={false}
+              onSlotClick={(tableId, hour, minute) => {
+                const table = timeline.tables.find(t => t.id === tableId);
+                if (table) {
+                  setPreciseBookingDialog({
+                    open: true,
+                    tableId,
+                    tableCode: table.code,
+                    tablePriceHour: table.priceHour,
+                    initialHour: hour,
+                    initialMinute: minute,
+                  });
+                }
+              }}
+            />
+          ) : (
+            <div className="text-center py-12 text-slate-600 dark:text-slate-400">
+              No data available
+            </div>
+          )}
+
+          {/* Legend */}
+          <div className="mt-6 flex justify-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800 px-4 py-2">
+              <div className="w-6 h-6 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded"></div>
+              <span className="text-sm text-slate-600 dark:text-slate-300">Trống</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 px-4 py-2">
+              <div className="w-6 h-6 bg-yellow-100 dark:bg-yellow-900/30 border-2 border-yellow-300 dark:border-yellow-700 rounded"></div>
+              <span className="text-sm text-slate-600 dark:text-slate-300">Chờ xác nhận</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-green-50 dark:bg-green-900/20 px-4 py-2">
+              <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 border-2 border-green-300 dark:border-green-700 rounded"></div>
+              <span className="text-sm text-slate-600 dark:text-slate-300">Đã xác nhận</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="menu" className="py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
@@ -437,6 +565,21 @@ export default function Home() {
       </section>
 
       <PublicFooter />
+
+      {/* Precise Booking Dialog */}
+      <PreciseBookingDialog
+        open={preciseBookingDialog.open}
+        onOpenChange={(open) => setPreciseBookingDialog({ ...preciseBookingDialog, open })}
+        tableId={preciseBookingDialog.tableId}
+        tableCode={preciseBookingDialog.tableCode}
+        tablePriceHour={preciseBookingDialog.tablePriceHour}
+        selectedDate={selectedDate}
+        initialHour={preciseBookingDialog.initialHour}
+        initialMinute={preciseBookingDialog.initialMinute}
+        onSuccess={async () => {
+          await mutateTimeline();
+        }}
+      />
     </div>
   );
 }
