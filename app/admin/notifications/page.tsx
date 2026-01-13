@@ -1,21 +1,31 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useNotifications, useUnreadCount } from '@/lib/hooks/use-notifications';
 import { notificationsApi } from '@/lib/api/notifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Check, CheckCheck, Trash2 } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, ExternalLink, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PageSkeleton } from '@/components/loaders/page-skeleton';
 import { Notification } from '@/lib/types';
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const { notifications, isLoading, isError, mutate } = useNotifications();
   const { count: unreadCount, mutate: mutateUnreadCount } = useUnreadCount();
   const [actioningId, setActioningId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Debug: log notifications to see metadata
+  useEffect(() => {
+    if (notifications && notifications.length > 0) {
+      console.log('Notifications:', notifications);
+      console.log('First notification metadata:', notifications[0].metadata);
+    }
+  }, [notifications]);
 
   if (isLoading) return <PageSkeleton />;
 
@@ -69,14 +79,27 @@ export default function NotificationsPage() {
   };
 
   const getTypeColor = (type: Notification['type']) => {
-    const colors = {
+    const colors: Record<string, string> = {
       BOOKING: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      BOOKING_REMINDER: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      BOOKING_CANCELLED: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       ORDER: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       PAYMENT: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
       TABLE: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
       SYSTEM: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
     };
     return colors[type] || colors.SYSTEM;
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Nếu notification có bookingId trong metadata, navigate đến trang bookings
+    if (notification.metadata?.bookingId) {
+      // Mark as read trước khi navigate
+      if (!notification.isRead) {
+        handleMarkAsRead(notification.id);
+      }
+      router.push(`/admin/bookings?highlight=${notification.metadata.bookingId}`);
+    }
   };
 
   return (
@@ -124,6 +147,9 @@ export default function NotificationsPage() {
                       {!notification.isRead && (
                         <span className="h-2 w-2 rounded-full bg-blue-500"></span>
                       )}
+                      {notification.metadata?.bookingId && (
+                        <ExternalLink className="h-3 w-3 text-blue-500" />
+                      )}
                     </div>
                     <span className="text-xs text-slate-500 whitespace-nowrap">
                       {new Date(notification.createdAt).toLocaleString('vi-VN')}
@@ -137,7 +163,19 @@ export default function NotificationsPage() {
                     {notification.message}
                   </p>
 
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                    {notification.metadata?.bookingId && (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={() => handleNotificationClick(notification)}
+                        disabled={actioningId === notification.id}
+                      >
+                        <ArrowRight className="h-3 w-3 mr-1" />
+                        View Booking
+                      </Button>
+                    )}
                     {!notification.isRead && (
                       <Button
                         size="sm"

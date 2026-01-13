@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useBookings, usePendingBookingsCount } from '@/lib/hooks/use-bookings';
 import { useTables } from '@/lib/hooks/use-tables';
 import { bookingsApi } from '@/lib/api/bookings';
@@ -18,6 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { PageSkeleton } from '@/components/loaders/page-skeleton';
 
 export default function BookingsPage() {
+  const searchParams = useSearchParams();
+  const highlightBookingId = searchParams.get('highlight');
   const { bookings, isLoading, isError, mutate } = useBookings();
   const { mutate: mutatePendingCount } = usePendingBookingsCount();
   const { tables } = useTables();
@@ -32,6 +35,18 @@ export default function BookingsPage() {
     startTime: '',
     endTime: '',
   });
+
+  // Scroll to and highlight booking when coming from notification
+  useEffect(() => {
+    if (highlightBookingId && bookings) {
+      const element = document.getElementById(`booking-${highlightBookingId}`);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 500);
+      }
+    }
+  }, [highlightBookingId, bookings]);
 
   if (isLoading) return <PageSkeleton />;
 
@@ -218,9 +233,14 @@ export default function BookingsPage() {
                 const customerName = isGuest 
                   ? (booking.guestName || 'Guest') 
                   : (booking.user?.name || 'Customer');
+                const isHighlighted = highlightBookingId === booking.id;
                 
                 return (
-                <TableRow key={booking.id}>
+                <TableRow 
+                  key={booking.id}
+                  id={`booking-${booking.id}`}
+                  className={`transition-all ${isHighlighted ? 'bg-red-50 dark:bg-red-950 border-2 border-red-500 animate-pulse' : ''}`}
+                >
                   <TableCell className="font-medium">{booking.table?.code || booking.tableId}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -269,7 +289,8 @@ export default function BookingsPage() {
                       {booking.status === 'CONFIRMED' && (
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant={isHighlighted ? "default" : "outline"}
+                          className={isHighlighted ? "bg-green-600 hover:bg-green-700 animate-bounce" : ""}
                           onClick={() => handleComplete(booking.id)}
                           disabled={actioningId === booking.id}
                         >

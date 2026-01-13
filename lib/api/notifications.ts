@@ -4,22 +4,20 @@ import { Notification } from '../types';
 export const notificationsApi = {
   // Get all notifications for current user
   getAll: async (): Promise<Notification[]> => {
-    const response = await apiClient.get<Notification[]>('/notifications/my');
-    // Interceptor already unwraps response.data.data to just the array
-    return response.map((n: any) => ({ ...n, message: n.content }));
+    const data = await apiClient.get('/notifications/my') as any as Notification[];
+    return data.map((n: any) => ({ ...n, message: n.content }));
   },
 
   // Get unread notifications count
   getUnreadCount: async (): Promise<number> => {
-    const response = await apiClient.get<{ count: number }>('/notifications/my/unread-count');
-    // Interceptor already unwraps response.data.data
-    return response.count;
+    const data = await apiClient.get('/notifications/my/unread-count') as any as { count: number };
+    return data.count;
   },
 
   // Mark notification as read
   markAsRead: async (id: string): Promise<Notification> => {
-    const response = await apiClient.patch<Notification>(`/notifications/${id}/read`, {});
-    return { ...response as any, message: (response as any).content };
+    const data = await apiClient.patch(`/notifications/${id}/read`, {}) as any;
+    return { ...data, message: data.content };
   },
 
   // Mark all notifications as read

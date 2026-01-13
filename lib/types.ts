@@ -105,7 +105,7 @@ export interface Payment {
 }
 
 // Notification types - matching Prisma schema
-export type NotificationType = 'BOOKING' | 'ORDER' | 'PAYMENT' | 'TABLE' | 'SYSTEM';
+export type NotificationType = 'BOOKING' | 'ORDER' | 'PAYMENT' | 'TABLE' | 'SYSTEM' | 'BOOKING_REMINDER' | 'BOOKING_CANCELLED';
 
 export interface Notification {
   id: string;
@@ -115,6 +115,10 @@ export interface Notification {
   message?: string; // Alias for content for easier use
   type: NotificationType | string;
   isRead: boolean;
+  metadata?: {
+    bookingId?: string;
+    [key: string]: any;
+  };
   createdAt: string;
   user?: User;
 }
