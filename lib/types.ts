@@ -1,5 +1,5 @@
 // User types - matching Prisma schema
-export type UserRole = 'ADMIN' | 'STAFF' | 'CUSTOMER';
+export type UserRole = "ADMIN" | "STAFF" | "CUSTOMER";
 
 export interface User {
   id: string;
@@ -13,8 +13,8 @@ export interface User {
 }
 
 // Table types - matching Prisma schema
-export type TableType = 'CAROM' | 'POOL' | 'SNOOKER';
-export type TableStatus = 'IDLE' | 'PLAYING' | 'RESERVED';
+export type TableType = "CAROM" | "POOL" | "SNOOKER";
+export type TableStatus = "IDLE" | "PLAYING" | "RESERVED";
 
 export interface Table {
   id: string;
@@ -29,7 +29,7 @@ export interface Table {
 }
 
 // Booking types - matching Prisma schema
-export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
 
 export interface Booking {
   id: string;
@@ -63,12 +63,13 @@ export interface MenuItem {
 }
 
 // Order types - matching Prisma schema
-export type OrderStatus = 'OPEN' | 'PAID' | 'CANCELLED';
+export type OrderStatus = "OPEN" | "PAID" | "CANCELLED";
 
 export interface OrderItem {
   id: string;
   orderId: string;
   menuItemId: string;
+  menuItemName: string;
   quantity: number;
   price: number;
   menuItem?: MenuItem;
@@ -83,13 +84,14 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   table?: Table;
+  tableCode: string;
   booking?: Booking;
   items?: OrderItem[];
 }
 
 // Payment types - matching Prisma schema
-export type PaymentMethod = 'CASH' | 'MOMO';
-export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED';
+export type PaymentMethod = "CASH" | "MOMO";
+export type PaymentStatus = "PENDING" | "PAID" | "FAILED";
 
 export interface Payment {
   id: string;
@@ -161,4 +163,3 @@ export interface TimelineResponse {
   tables: TimelineTable[];
   timeSlots: string[]; // Array of time slots like ['08:00', '09:00', ...]
 }
-
