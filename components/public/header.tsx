@@ -1,12 +1,50 @@
 "use client";
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { CircleDot, Moon, Sun } from 'lucide-react';
+import { CircleDot, Moon, Sun, User, LogOut, Settings } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { usersApi } from '@/lib/api/users';
 
 export function PublicHeader() {
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      try {
+        const userData = await usersApi.getMe();
+        setUser(userData);
+      } catch (error) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+      }
+    }
+    setLoading(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+    setUser(null);
+    router.push('/');
+  };
 
   return (
     <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50 dark:border-slate-800 dark:bg-slate-900/50">
@@ -42,10 +80,10 @@ export function PublicHeader() {
               Menu
             </Link>
             <Link
-              href="/#bookings"
+              href="/booking/history"
               className="text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
             >
-              My Bookings
+              My History
             </Link>
           </nav>
 
@@ -58,14 +96,45 @@ export function PublicHeader() {
             >
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
-            <Link href="/login">
-              <Button
-                variant="outline"
-                className="border-emerald-500 text-emerald-600 hover:bg-emerald-500/10 dark:border-emerald-700 dark:text-emerald-500"
-              >
-                Sign In
-              </Button>
-            </Link>
+            
+            {loading ? null : user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="border-emerald-500 text-emerald-600 hover:bg-emerald-500/10">
+                    <User className="h-4 w-4 mr-2" />
+                    {user.name || user.email}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="cursor-pointer">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Profile Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/booking/history" className="cursor-pointer">
+                      <CircleDot className="h-4 w-4 mr-2" />
+                      My History
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/login">
+                <Button
+                  variant="outline"
+                  className="border-emerald-500 text-emerald-600 hover:bg-emerald-500/10 dark:border-emerald-700 dark:text-emerald-500"
+                >
+                  Sign In
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>

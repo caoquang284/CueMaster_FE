@@ -84,6 +84,12 @@ export const bookingsApi = {
     return response;
   },
 
+  // Check-in booking (Admin/Staff) - when customer arrives
+  checkin: async (id: string): Promise<any> => {
+    const response = await apiClient.post(`/bookings/${id}/checkin`, {});
+    return response;
+  },
+
   // Get timeline view for bookings
   getTimeline: async (date?: string): Promise<TimelineResponse> => {
     const url = date ? `/bookings/timeline?date=${date}` : '/bookings/timeline';

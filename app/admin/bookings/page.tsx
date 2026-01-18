@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Clock, Eye, LogIn } from 'lucide-react';
 import { BookingStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PageSkeleton } from '@/components/loaders/page-skeleton';
@@ -126,14 +126,32 @@ export default function BookingsPage() {
     }
   };
 
+  const handleCheckin = async (id: string) => {
+    try {
+      setActioningId(id);
+      const result = await bookingsApi.checkin(id);
+      await Promise.all([mutate(), mutatePendingCount()]);
+      toast({ 
+        title: 'Check-in Successful', 
+        description: `Table started and order created. Order ID: ${result.order.id.slice(0, 8)}` 
+      });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setActioningId(null);
+    }
+  };
+
   const getStatusBadge = (status: BookingStatus) => {
     const config = {
-      PENDING: { variant: 'secondary' as const, label: 'Pending' },
-      CONFIRMED: { variant: 'default' as const, label: 'Confirmed' },
-      CANCELLED: { variant: 'destructive' as const, label: 'Cancelled' },
-      COMPLETED: { variant: 'outline' as const, label: 'Completed' },
+      PENDING: { variant: 'secondary' as const, label: 'Pending', className: undefined },
+      CONFIRMED: { variant: 'default' as const, label: 'Confirmed', className: undefined },
+      IN_PROGRESS: { variant: 'default' as const, label: 'In Progress', className: 'bg-blue-600' },
+      CANCELLED: { variant: 'destructive' as const, label: 'Cancelled', className: undefined },
+      COMPLETED: { variant: 'outline' as const, label: 'Completed', className: undefined },
     };
-    return <Badge variant={config[status].variant}>{config[status].label}</Badge>;
+    const cfg = config[status];
+    return <Badge variant={cfg.variant} className={cfg.className}>{cfg.label}</Badge>;
   };
 
   const formatDateTime = (dateTime: string) => {
@@ -289,8 +307,19 @@ export default function BookingsPage() {
                       {booking.status === 'CONFIRMED' && (
                         <Button
                           size="sm"
-                          variant={isHighlighted ? "default" : "outline"}
-                          className={isHighlighted ? "bg-green-600 hover:bg-green-700 animate-bounce" : ""}
+                          variant={isHighlighted ? "default" : "default"}
+                          className={isHighlighted ? "bg-blue-600 hover:bg-blue-700 animate-bounce" : "bg-blue-600 hover:bg-blue-700"}
+                          onClick={() => handleCheckin(booking.id)}
+                          disabled={actioningId === booking.id}
+                        >
+                          <LogIn className="h-4 w-4 mr-1" />
+                          Check-in
+                        </Button>
+                      )}
+                      {booking.status === 'IN_PROGRESS' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleComplete(booking.id)}
                           disabled={actioningId === booking.id}
                         >
@@ -314,7 +343,7 @@ export default function BookingsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
             <div className="text-3xl font-bold text-yellow-500 mb-1">
@@ -334,6 +363,14 @@ export default function BookingsPage() {
         <Card className="dark:border-slate-800 dark:bg-slate-900">
           <CardContent className="pt-6">
             <div className="text-3xl font-bold text-blue-500 mb-1">
+              {(bookings || []).filter(b => b.status === 'IN_PROGRESS').length}
+            </div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">In Progress</div>
+          </CardContent>
+        </Card>
+        <Card className="dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold text-purple-500 mb-1">
               {(bookings || []).filter(b => b.status === 'COMPLETED').length}
             </div>
             <div className="text-sm text-slate-600 dark:text-slate-400">Completed</div>

@@ -58,4 +58,16 @@ export const usersApi = {
     const response = await apiClient.post<User>('/users', data);
     return response;
   },
+
+  // Get user booking history (Admin)
+  getUserBookings: async (userId: string): Promise<any[]> => {
+    const response = await apiClient.get<any[]>(`/users/${userId}/bookings`);
+    return response;
+  },
+
+  // Get my booking history
+  getMyBookings: async (): Promise<any[]> => {
+    const response = await apiClient.get<any[]>('/users/me/bookings');
+    return response;
+  },
 };

@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useTables } from "@/lib/hooks/use-tables";
+import { useOrders } from "@/lib/hooks/use-orders";
+import { useMenu } from "@/lib/hooks/use-menu";
 import { tablesApi } from "@/lib/api/tables";
+import { ordersApi } from "@/lib/api/orders";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,18 +27,23 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { TableType, TableStatus } from "@/lib/types";
-import { Search, Plus, Play, Square } from "lucide-react";
+import { Search, Plus, Play, Square, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageSkeleton } from "@/components/loaders/page-skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 export default function TablesPage() {
   const { tables, isLoading, isError, mutate } = useTables();
+  const { orders, mutate: mutateOrders } = useOrders({});
+  const { menuItems } = useMenu();
   const [filterType, setFilterType] = useState<TableType | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [updating, setUpdating] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [selectedTableForOrder, setSelectedTableForOrder] = useState<any>(null);
+  const [quickOrderItem, setQuickOrderItem] = useState("");
+  const [quickOrderQty, setQuickOrderQty] = useState(1);
   const { toast } = useToast();
 
   // Cập nhật thời gian mỗi phút để hiển thị thời gian đã chơi real-time
@@ -178,6 +186,50 @@ export default function TablesPage() {
       });
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const handleAddQuickOrderItem = async () => {
+    if (!selectedTableForOrder || !quickOrderItem) {
+      toast({
+        title: "Error",
+        description: "Please select an item",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const tableOrder = (orders || []).find(
+      o => o.tableId === selectedTableForOrder.id && o.status === "OPEN"
+    );
+
+    if (!tableOrder) {
+      toast({
+        title: "Error",
+        description: "No active order found for this table",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await ordersApi.addItem(tableOrder.id, {
+        menuItemId: quickOrderItem,
+        quantity: quickOrderQty,
+      });
+      await mutateOrders();
+      toast({
+        title: "Success",
+        description: "Item added to order",
+      });
+      setQuickOrderItem("");
+      setQuickOrderQty(1);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -368,14 +420,23 @@ export default function TablesPage() {
                     </Button>
                   )}
                   {table.status === "PLAYING" && (
-                    <Button
-                      className="w-full bg-red-600 hover:bg-red-700"
-                      onClick={() => handleEndTable(table.id)}
-                      disabled={updating === table.id}
-                    >
-                      <Square className="h-4 w-4 mr-2" />
-                      {updating === table.id ? "Ending..." : "End"}
-                    </Button>
+                    <>
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        onClick={() => setSelectedTableForOrder(table)}
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        Order
+                      </Button>
+                      <Button
+                        className="w-full bg-red-600 hover:bg-red-700"
+                        onClick={() => handleEndTable(table.id)}
+                        disabled={updating === table.id}
+                      >
+                        <Square className="h-4 w-4 mr-2" />
+                        {updating === table.id ? "Ending..." : "End"}
+                      </Button>
+                    </>
                   )}
                   <Select
                     value={table.status}
@@ -438,6 +499,158 @@ export default function TablesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick Order Dialog */}
+      <Dialog
+        open={!!selectedTableForOrder}
+        onOpenChange={() => {
+          setSelectedTableForOrder(null);
+          setQuickOrderItem("");
+          setQuickOrderQty(1);
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Quick Order - Table {selectedTableForOrder?.code}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTableForOrder && (() => {
+            const tableOrder = (orders || []).find(
+              o => o.tableId === selectedTableForOrder.id && o.status === "OPEN"
+            );
+
+            return (
+              <div className="space-y-4 py-4">
+                {/* Order Info */}
+                {tableOrder ? (
+                  <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold">Current Order</h3>
+                      <Badge>Order #{tableOrder.id.slice(0, 8)}</Badge>
+                    </div>
+                    
+                    {/* Current Items */}
+                    {tableOrder.items && tableOrder.items.length > 0 ? (
+                      <div className="space-y-2 mb-4">
+                        <Label className="text-xs text-slate-500">Items:</Label>
+                        {tableOrder.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex justify-between items-center text-sm p-2 bg-white dark:bg-slate-900 rounded"
+                          >
+                            <span>{item.menuItemName || "Item"}</span>
+                            <span className="font-medium">
+                              {item.quantity}x × {item.price.toLocaleString()}đ
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-500 mb-4">No items yet</p>
+                    )}
+
+                    {/* Total */}
+                    <div className="border-t pt-3 flex justify-between items-center">
+                      <span className="font-semibold">Order Total:</span>
+                      <span className="text-xl font-bold text-blue-600">
+                        {tableOrder.total.toLocaleString()}đ
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg p-4 bg-yellow-50 dark:bg-yellow-950 border-yellow-200">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      ⚠️ No active order found for this table. Please create an order first.
+                    </p>
+                  </div>
+                )}
+
+                {/* Add Item Form */}
+                {tableOrder && (
+                  <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-950">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4" />
+                      Add New Item
+                    </h3>
+                    <div className="flex gap-2">
+                      <Select
+                        value={quickOrderItem}
+                        onValueChange={setQuickOrderItem}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Select item..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(menuItems || [])
+                            .filter(m => m.isAvailable)
+                            .map(item => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.name} - {item.price.toLocaleString()}đ
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={quickOrderQty}
+                        onChange={e =>
+                          setQuickOrderQty(parseInt(e.target.value) || 1)
+                        }
+                        className="w-20"
+                      />
+                      <Button
+                        onClick={handleAddQuickOrderItem}
+                        disabled={!quickOrderItem}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Table Info */}
+                <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
+                  <h3 className="font-semibold mb-2">Table Info</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <Label className="text-xs text-slate-500">Type:</Label>
+                      <p className="font-medium">{selectedTableForOrder.type}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500">Rate:</Label>
+                      <p className="font-medium">
+                        {selectedTableForOrder.priceHour.toLocaleString()}đ/h
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-xs text-slate-500">Playing time:</Label>
+                      <p className="font-medium text-orange-600">
+                        {calculatePlayedTime(selectedTableForOrder.updatedAt)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedTableForOrder(null);
+                setQuickOrderItem("");
+                setQuickOrderQty(1);
+              }}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

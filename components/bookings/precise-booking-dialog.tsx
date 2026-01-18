@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { bookingsApi } from '@/lib/api/bookings';
+import { User } from '@/lib/types';
+import { CircleDot } from 'lucide-react';
 
 interface PreciseBookingDialogProps {
   open: boolean;
@@ -17,6 +19,7 @@ interface PreciseBookingDialogProps {
   selectedDate: string;
   initialHour: number;
   initialMinute: number;
+  currentUser?: User | null;
   onSuccess?: () => void;
 }
 
@@ -29,6 +32,7 @@ export function PreciseBookingDialog({
   selectedDate,
   initialHour,
   initialMinute,
+  currentUser,
   onSuccess,
 }: PreciseBookingDialogProps) {
   const { toast } = useToast();
@@ -58,11 +62,14 @@ export function PreciseBookingDialog({
       
       setFormData(prev => ({
         ...prev,
+        guestName: currentUser?.name || '',
+        guestEmail: currentUser?.email || '',
+        guestPhone: currentUser?.phone || '',
         startTime: newStartTime,
         endTime: newEndTime,
       }));
     }
-  }, [open, initialHour, initialMinute]);
+  }, [open, initialHour, initialMinute, currentUser]);
 
   const calculatePrice = () => {
     const [startH, startM] = formData.startTime.split(':').map(Number);
@@ -106,14 +113,16 @@ export function PreciseBookingDialog({
   };
 
   const handleSubmit = async () => {
-    // Validation
-    if (!formData.guestName || !formData.guestEmail || !formData.guestPhone) {
-      toast({
-        title: 'Lỗi',
-        description: 'Vui lòng điền đầy đủ thông tin',
-        variant: 'destructive',
-      });
-      return;
+    // Validation for guest users only
+    if (!currentUser) {
+      if (!formData.guestName || !formData.guestEmail || !formData.guestPhone) {
+        toast({
+          title: 'Lỗi',
+          description: 'Vui lòng điền đầy đủ thông tin',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     const startDateTime = new Date(`${selectedDate}T${formData.startTime}:00`);
@@ -135,14 +144,26 @@ export function PreciseBookingDialog({
 
     try {
       setIsSubmitting(true);
-      await bookingsApi.createPublic({
-        tableId,
-        startTime: startDateTime.toISOString(),
-        endTime: endDateTime.toISOString(),
-        guestName: formData.guestName,
-        guestEmail: formData.guestEmail,
-        guestPhone: formData.guestPhone,
-      });
+      
+      if (currentUser) {
+        // Create booking for logged-in user
+        await bookingsApi.create({
+          userId: currentUser.id,
+          tableId,
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+        });
+      } else {
+        // Create public booking for guest
+        await bookingsApi.createPublic({
+          tableId,
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+          guestName: formData.guestName,
+          guestEmail: formData.guestEmail,
+          guestPhone: formData.guestPhone,
+        });
+      }
 
       toast({
         title: 'Thành công!',
@@ -222,37 +243,53 @@ export function PreciseBookingDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="guestName">Họ và tên *</Label>
-            <Input
-              id="guestName"
-              placeholder="Nguyễn Văn A"
-              value={formData.guestName}
-              onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
-            />
-          </div>
+          {!currentUser ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="guestName">Họ và tên *</Label>
+                <Input
+                  id="guestName"
+                  placeholder="Nguyễn Văn A"
+                  value={formData.guestName}
+                  onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="guestEmail">Email *</Label>
-            <Input
-              id="guestEmail"
-              type="email"
-              placeholder="email@example.com"
-              value={formData.guestEmail}
-              onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="guestEmail">Email *</Label>
+                <Input
+                  id="guestEmail"
+                  type="email"
+                  placeholder="email@example.com"
+                  value={formData.guestEmail}
+                  onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="guestPhone">Số điện thoại *</Label>
-            <Input
-              id="guestPhone"
-              type="tel"
-              placeholder="0912345678"
-              value={formData.guestPhone}
-              onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="guestPhone">Số điện thoại *</Label>
+                <Input
+                  id="guestPhone"
+                  type="tel"
+                  placeholder="0912345678"
+                  value={formData.guestPhone}
+                  onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 mb-2">
+                <CircleDot className="h-4 w-4" />
+                <span className="font-medium text-sm">Đặt bàn với tài khoản đã đăng nhập</span>
+              </div>
+              <div className="text-xs text-emerald-600 dark:text-emerald-500 space-y-1">
+                <p><strong>Tên:</strong> {currentUser.name || 'N/A'}</p>
+                <p><strong>Email:</strong> {currentUser.email}</p>
+                <p><strong>SĐT:</strong> {currentUser.phone || 'N/A'}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>

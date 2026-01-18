@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +44,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await register({ email, password, name });
+      await register({ email, password, name, phone });
     } catch (error) {
       // Error handling is done in auth context
     } finally {
@@ -89,6 +90,18 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
+                className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-slate-700 dark:text-slate-200">Số điện thoại (Tùy chọn)</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+84 123 456 789"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 disabled={isLoading}
                 className="dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
               />

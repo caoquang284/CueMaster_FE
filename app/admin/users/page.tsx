@@ -11,8 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, MoreVertical } from 'lucide-react';
-import { User, UserRole } from '@/lib/types';
+import { Plus, Search, MoreVertical, History } from 'lucide-react';
+import { User, UserRole, BookingStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PageSkeleton } from '@/components/loaders/page-skeleton';
 import {
@@ -29,6 +29,9 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<UserRole | 'all'>('all');
   const [actioningId, setActioningId] = useState<string | null>(null);
+  const [historyUser, setHistoryUser] = useState<User | null>(null);
+  const [userBookings, setUserBookings] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -127,6 +130,36 @@ export default function UsersPage() {
     }
   };
 
+  const handleViewHistory = async (user: User) => {
+    setHistoryUser(user);
+    setLoadingHistory(true);
+    try {
+      const bookings = await usersApi.getUserBookings(user.id);
+      setUserBookings(bookings);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      setUserBookings([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const getStatusBadge = (status: BookingStatus) => {
+    const config = {
+      PENDING: { variant: 'secondary' as const, label: 'Pending' },
+      CONFIRMED: { variant: 'default' as const, label: 'Confirmed' },
+      IN_PROGRESS: { variant: 'default' as const, label: 'In Progress', className: 'bg-blue-600' },
+      CANCELLED: { variant: 'destructive' as const, label: 'Cancelled' },
+      COMPLETED: { variant: 'outline' as const, label: 'Completed' },
+    };
+    const cfg = config[status];
+    return <Badge variant={cfg.variant} className={cfg.className}>{cfg.label}</Badge>;
+  };
+
+  const formatDateTime = (dateTime: string) => {
+    return new Date(dateTime).toLocaleString('vi-VN');
+  };
+
   const getRoleBadge = (role: UserRole) => {
     const config = {
       ADMIN: { variant: 'destructive' as const, label: 'Admin' },
@@ -213,6 +246,10 @@ export default function UsersPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleOpenDialog(user)}>
                           Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewHistory(user)}>
+                          <History className="h-4 w-4 mr-2" />
+                          View History
                         </DropdownMenuItem>
                         {user.isActive && (
                           <DropdownMenuItem 
@@ -318,6 +355,105 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* User Booking History Dialog */}
+      <Dialog open={!!historyUser} onOpenChange={() => { setHistoryUser(null); setUserBookings([]); }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">
+              Booking History - {historyUser?.name || historyUser?.email}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {loadingHistory ? (
+            <div className="flex justify-center py-12">
+              <div className="text-slate-600 dark:text-slate-400">Loading...</div>
+            </div>
+          ) : userBookings.length === 0 ? (
+            <div className="text-center py-12 text-slate-600 dark:text-slate-400">
+              No booking history found
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-slate-900 dark:text-white">
+                      {userBookings.length}
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">Total Bookings</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-green-500">
+                      {userBookings.filter(b => b.status === 'COMPLETED').length}
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">Completed</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-blue-500">
+                      {userBookings.filter(b => b.status === 'IN_PROGRESS').length}
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">In Progress</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold text-emerald-600">
+                      {userBookings.reduce((sum, b) => sum + (b.totalPrice || 0) + (b.order?.totalAmount || 0), 0).toLocaleString()}đ
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">Total Revenue</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Table</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Table Cost</TableHead>
+                    <TableHead>Order Cost</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {userBookings.map((booking) => {
+                    const duration = ((new Date(booking.endTime).getTime() - new Date(booking.startTime).getTime()) / (1000 * 60 * 60)).toFixed(1);
+                    const orderTotal = booking.order?.totalAmount || 0;
+                    const total = booking.totalPrice + orderTotal;
+                    
+                    return (
+                      <TableRow key={booking.id}>
+                        <TableCell className="font-medium">
+                          {formatDateTime(booking.startTime)}
+                        </TableCell>
+                        <TableCell>{booking.table?.code}</TableCell>
+                        <TableCell>{duration}h</TableCell>
+                        <TableCell>{booking.totalPrice.toLocaleString()}đ</TableCell>
+                        <TableCell>{orderTotal.toLocaleString()}đ</TableCell>
+                        <TableCell className="font-bold">{total.toLocaleString()}đ</TableCell>
+                        <TableCell>{getStatusBadge(booking.status)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setHistoryUser(null); setUserBookings([]); }}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

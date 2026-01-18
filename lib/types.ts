@@ -6,6 +6,7 @@ export interface User {
   email: string;
   password?: string;
   name: string | null;
+  phone: string | null;
   role: UserRole;
   isActive: boolean;
   createdAt: string;
@@ -29,7 +30,7 @@ export interface Table {
 }
 
 // Booking types - matching Prisma schema
-export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
+export type BookingStatus = "PENDING" | "CONFIRMED" | "IN_PROGRESS" | "CANCELLED" | "COMPLETED";
 
 export interface Booking {
   id: string;

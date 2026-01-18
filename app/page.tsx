@@ -13,7 +13,7 @@ import { CalendarDays, Clock, CircleDot, Sparkles, UtensilsCrossed, ChevronLeft,
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
-import { tablesApi, menuApi, bookingsApi } from '@/lib/api';
+import { tablesApi, menuApi, bookingsApi, usersApi } from '@/lib/api';
 import type { CreatePublicBookingDto } from '@/lib/api/bookings';
 import { Table, MenuItem, Booking } from '@/lib/types';
 import { useBookingTimeline } from '@/lib/hooks/use-bookings';
@@ -24,6 +24,7 @@ export default function Home() {
   const [realtimeUpdate, setRealtimeUpdate] = useState(0);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
 
   // Real API data states
@@ -57,6 +58,29 @@ export default function Home() {
     startTime: '',
     durationHours: '2',
   });
+
+  // Check if user is logged in
+  useEffect(() => {
+    const checkUser = async () => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+          const userData = await usersApi.getMe();
+          setCurrentUser(userData);
+          // Pre-fill form with user data
+          setBookingForm(prev => ({
+            ...prev,
+            guestName: userData.name || '',
+            guestEmail: userData.email || '',
+            guestPhone: userData.phone || '',
+          }));
+        } catch (error) {
+          setCurrentUser(null);
+        }
+      }
+    };
+    checkUser();
+  }, []);
 
   // Fetch real data from API
   useEffect(() => {
@@ -97,14 +121,26 @@ export default function Home() {
   const availableTables = tables.filter(t => t.status === 'IDLE');
 
   const handleBooking = async () => {
-    if (!bookingForm.selectedTableId || !bookingForm.guestName || !bookingForm.guestEmail || 
-        !bookingForm.guestPhone || !bookingForm.startDate || !bookingForm.startTime) {
-      toast({
-        title: 'Error',
-        description: 'Please fill all required fields',
-        variant: 'destructive',
-      });
-      return;
+    // For logged-in users, skip the validation of name, email, phone
+    if (!currentUser) {
+      if (!bookingForm.selectedTableId || !bookingForm.guestName || !bookingForm.guestEmail || 
+          !bookingForm.guestPhone || !bookingForm.startDate || !bookingForm.startTime) {
+        toast({
+          title: 'Error',
+          description: 'Please fill all required fields',
+          variant: 'destructive',
+        });
+        return;
+      }
+    } else {
+      if (!bookingForm.selectedTableId || !bookingForm.startDate || !bookingForm.startTime) {
+        toast({
+          title: 'Error',
+          description: 'Please select table, date and time',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     try {
@@ -114,16 +150,26 @@ export default function Home() {
       const startDateTime = new Date(`${bookingForm.startDate}T${bookingForm.startTime}`);
       const endDateTime = new Date(startDateTime.getTime() + parseInt(bookingForm.durationHours) * 60 * 60 * 1000);
 
-      const bookingData: CreatePublicBookingDto = {
-        tableId: bookingForm.selectedTableId,
-        startTime: startDateTime.toISOString(),
-        endTime: endDateTime.toISOString(),
-        guestName: bookingForm.guestName,
-        guestEmail: bookingForm.guestEmail,
-        guestPhone: bookingForm.guestPhone,
-      };
-
-      await bookingsApi.createPublic(bookingData);
+      // If user is logged in, create booking with userId
+      if (currentUser) {
+        await bookingsApi.create({
+          userId: currentUser.id,
+          tableId: bookingForm.selectedTableId,
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+        });
+      } else {
+        // Create as guest booking
+        const bookingData: CreatePublicBookingDto = {
+          tableId: bookingForm.selectedTableId,
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+          guestName: bookingForm.guestName,
+          guestEmail: bookingForm.guestEmail,
+          guestPhone: bookingForm.guestPhone,
+        };
+        await bookingsApi.createPublic(bookingData);
+      }
 
       toast({
         title: 'Booking Confirmed!',
@@ -133,8 +179,8 @@ export default function Home() {
       // Reset form
       setBookingForm({
         selectedTableId: '',
-        guestName: '',
-        guestEmail: '',
+        guestName: currentUser?.name || '',
+        guestEmail: currentUser?.email || '',
         guestPhone: '',
         startDate: '',
         startTime: '',
@@ -251,37 +297,55 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Full Name *</Label>
-                      <Input
-                        value={bookingForm.guestName}
-                        onChange={(e) => setBookingForm({ ...bookingForm, guestName: e.target.value })}
-                        className="dark:border-slate-700 dark:bg-slate-800"
-                        placeholder="Nguyễn Văn A"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email *</Label>
-                      <Input
-                        type="email"
-                        value={bookingForm.guestEmail}
-                        onChange={(e) => setBookingForm({ ...bookingForm, guestEmail: e.target.value })}
-                        className="dark:border-slate-700 dark:bg-slate-800"
-                        placeholder="email@example.com"
-                      />
-                    </div>
-                  </div>
+                  {!currentUser && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Full Name *</Label>
+                          <Input
+                            value={bookingForm.guestName}
+                            onChange={(e) => setBookingForm({ ...bookingForm, guestName: e.target.value })}
+                            className="dark:border-slate-700 dark:bg-slate-800"
+                            placeholder="Nguyễn Văn A"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Email *</Label>
+                          <Input
+                            type="email"
+                            value={bookingForm.guestEmail}
+                            onChange={(e) => setBookingForm({ ...bookingForm, guestEmail: e.target.value })}
+                            className="dark:border-slate-700 dark:bg-slate-800"
+                            placeholder="email@example.com"
+                          />
+                        </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label>Phone Number *</Label>
-                    <Input
-                      value={bookingForm.guestPhone}
-                      onChange={(e) => setBookingForm({ ...bookingForm, guestPhone: e.target.value })}
-                      className="dark:border-slate-700 dark:bg-slate-800"
-                      placeholder="+84 123 456 789"
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label>Phone Number *</Label>
+                        <Input
+                          value={bookingForm.guestPhone}
+                          onChange={(e) => setBookingForm({ ...bookingForm, guestPhone: e.target.value })}
+                          className="dark:border-slate-700 dark:bg-slate-800"
+                          placeholder="+84 123 456 789"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {currentUser && (
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 mb-2">
+                        <CircleDot className="h-4 w-4" />
+                        <span className="font-medium text-sm">Booking as logged-in user</span>
+                      </div>
+                      <div className="text-xs text-emerald-600 dark:text-emerald-500 space-y-1">
+                        <p><strong>Name:</strong> {currentUser.name || 'N/A'}</p>
+                        <p><strong>Email:</strong> {currentUser.email}</p>
+                        <p><strong>Phone:</strong> {currentUser.phone || 'N/A'}</p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
@@ -576,6 +640,7 @@ export default function Home() {
         selectedDate={selectedDate}
         initialHour={preciseBookingDialog.initialHour}
         initialMinute={preciseBookingDialog.initialMinute}
+        currentUser={currentUser}
         onSuccess={async () => {
           await mutateTimeline();
         }}
