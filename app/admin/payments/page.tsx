@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePayments } from "@/lib/hooks/use-payments";
 import { useOrders } from "@/lib/hooks/use-orders";
 import { paymentsApi } from "@/lib/api/payments";
@@ -39,9 +40,12 @@ import { useToast } from "@/hooks/use-toast";
 import { PageSkeleton } from "@/components/loaders/page-skeleton";
 
 export default function PaymentsPage() {
+  const router = useRouter();
   const { payments, isLoading, isError, mutate } = usePayments();
   const { orders } = useOrders({ status: "OPEN" });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -253,7 +257,14 @@ export default function PaymentsPage() {
             </TableHeader>
             <TableBody>
               {(payments || []).map(payment => (
-                <TableRow key={payment.id}>
+                <TableRow
+                  key={payment.id}
+                  className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  onClick={() => {
+                    setSelectedPayment(payment);
+                    setIsDetailDialogOpen(true);
+                  }}
+                >
                   <TableCell className="font-mono text-xs">
                     {payment.id.slice(0, 8)}...
                   </TableCell>
@@ -326,6 +337,124 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Payment Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Chi tiết thanh toán</DialogTitle>
+          </DialogHeader>
+          {selectedPayment && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Mã thanh toán
+                  </p>
+                  <p className="font-mono text-sm font-semibold">
+                    {selectedPayment.id.slice(0, 12)}...
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Mã đơn hàng
+                  </p>
+                  <p className="font-mono text-sm font-semibold">
+                    {selectedPayment.orderId.slice(0, 12)}...
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-3">
+                  Chi phí
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Phí bàn
+                    </span>
+                    <span className="font-medium">
+                      {selectedPayment.tableCost.toLocaleString()}đ
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Phí đơn hàng
+                    </span>
+                    <span className="font-medium">
+                      {selectedPayment.orderCost.toLocaleString()}đ
+                    </span>
+                  </div>
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-2 mt-2 flex justify-between">
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      Tổng cộng
+                    </span>
+                    <span className="font-semibold text-lg text-blue-600">
+                      {selectedPayment.total.toLocaleString()}đ
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-200 dark:border-slate-700 pt-4">
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
+                    Phương thức thanh toán
+                  </p>
+                  <div>{getMethodBadge(selectedPayment.method)}</div>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
+                    Trạng thái
+                  </p>
+                  <div>{getStatusBadge(selectedPayment.status)}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-200 dark:border-slate-700 pt-4">
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Tạo lúc
+                  </p>
+                  <p className="text-sm font-medium">
+                    {new Date(selectedPayment.createdAt).toLocaleString(
+                      "vi-VN",
+                    )}
+                  </p>
+                </div>
+                {selectedPayment.paidAt && (
+                  <div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Thanh toán lúc
+                    </p>
+                    <p className="text-sm font-medium">
+                      {new Date(selectedPayment.paidAt).toLocaleString("vi-VN")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDetailDialogOpen(false)}
+            >
+              Đóng
+            </Button>
+            <Button
+              onClick={() => {
+                setIsDetailDialogOpen(false);
+                router.push(`/admin/orders?orderId=${selectedPayment.orderId}`);
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Xem Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

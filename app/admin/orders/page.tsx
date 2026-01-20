@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOrders } from "@/lib/hooks/use-orders";
 import { useTables } from "@/lib/hooks/use-tables";
 import { useMenu } from "@/lib/hooks/use-menu";
+import { useSearchParams } from "next/navigation";
 import { ordersApi } from "@/lib/api/orders";
 import { paymentsApi } from "@/lib/api/payments";
 import { tablesApi } from "@/lib/api/tables";
@@ -41,6 +42,7 @@ import { PageSkeleton } from "@/components/loaders/page-skeleton";
 import { OrderStatus } from "@/lib/types";
 
 export default function OrdersPage() {
+  const searchParams = useSearchParams();
   const { orders, isLoading, isError, mutate } = useOrders({});
   const { tables } = useTables();
   const { menuItems } = useMenu();
@@ -55,7 +57,42 @@ export default function OrdersPage() {
   const [editingQuantity, setEditingQuantity] = useState(1);
   const [newItemId, setNewItemId] = useState("");
   const [newItemQty, setNewItemQty] = useState(1);
+  const [tableInfo, setTableInfo] = useState<any>(null);
+  const [loadingTableInfo, setLoadingTableInfo] = useState(false);
   const { toast } = useToast();
+
+  // Kiểm tra query parameter orderId và mở dialog nếu có
+  useEffect(() => {
+    const orderId = searchParams.get("orderId");
+    if (orderId) {
+      setViewOrderId(orderId);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (viewOrderId) {
+      const order = orders?.find(o => o.id === viewOrderId);
+      if (order && order.tableId) {
+        setLoadingTableInfo(true);
+        tablesApi
+          .getById(order.tableId)
+          .then(table => {
+            setTableInfo(table);
+          })
+          .catch(error => {
+            console.error("Failed to load table info:", error);
+            toast({
+              title: "Warning",
+              description: "Could not load table info",
+              variant: "destructive",
+            });
+          })
+          .finally(() => {
+            setLoadingTableInfo(false);
+          });
+      }
+    }
+  }, [viewOrderId]);
 
   if (isLoading) return <PageSkeleton />;
 
@@ -70,6 +107,8 @@ export default function OrdersPage() {
     );
   }
 
+  // Gọi API lấy thông tin table khi mở view order detail
+
   const handleAddOrderItem = () => {
     setOrderItems([...orderItems, { menuItemId: "", quantity: 1 }]);
   };
@@ -81,11 +120,27 @@ export default function OrdersPage() {
   const handleUpdateOrderItem = (
     index: number,
     field: "menuItemId" | "quantity",
-    value: string | number
+    value: string | number,
   ) => {
     const updated = [...orderItems];
     updated[index] = { ...updated[index], [field]: value };
     setOrderItems(updated);
+  };
+
+  const calculateTableCost = (table: any) => {
+    if (!table || !table.priceHour) return 0;
+
+    // Nếu table đang PLAYING, tính tiền dựa vào thời gian từ updatedAt
+    if (table.status === "PLAYING" && table.updatedAt) {
+      const playingStartTime = new Date(table.updatedAt).getTime();
+      const currentTime = new Date().getTime();
+      const playingDurationMs = currentTime - playingStartTime;
+      const playingDurationHours = playingDurationMs / (1000 * 60 * 60);
+      return Math.ceil(playingDurationHours * table.priceHour);
+    }
+
+    // Nếu table không đang PLAYING, không tính tiền bàn
+    return 0;
   };
 
   const calculateTotal = () => {
@@ -116,7 +171,7 @@ export default function OrdersPage() {
 
       // Thêm items nếu có
       const validItems = orderItems.filter(
-        item => item.menuItemId && item.quantity > 0
+        item => item.menuItemId && item.quantity > 0,
       );
       for (const item of validItems) {
         await ordersApi.addItem(newOrder.id, {
@@ -161,7 +216,7 @@ export default function OrdersPage() {
   const handleAddItemToOrder = async (
     orderId: string,
     menuItemId: string,
-    quantity: number
+    quantity: number,
   ) => {
     try {
       await ordersApi.addItem(orderId, { menuItemId, quantity });
@@ -179,7 +234,7 @@ export default function OrdersPage() {
   const handleUpdateItemQuantity = async (
     orderId: string,
     itemId: string,
-    quantity: number
+    quantity: number,
   ) => {
     if (quantity < 1) return;
     try {
@@ -290,7 +345,7 @@ export default function OrdersPage() {
                   <SelectContent>
                     {(tables || [])
                       .filter(
-                        t => t.status === "IDLE" || t.status === "PLAYING"
+                        t => t.status === "IDLE" || t.status === "PLAYING",
                       )
                       .map(table => (
                         <SelectItem key={table.id} value={table.id}>
@@ -346,7 +401,7 @@ export default function OrdersPage() {
                         handleUpdateOrderItem(
                           index,
                           "quantity",
-                          parseInt(e.target.value)
+                          parseInt(e.target.value),
                         )
                       }
                       className="w-20"
@@ -476,6 +531,9 @@ export default function OrdersPage() {
               const order = orders?.find(o => o.id === viewOrderId);
               if (!order) return null;
 
+              // Sử dụng tableInfo từ API nếu có, nếu không dùng order.table
+              const currentTableInfo = tableInfo || order.table;
+
               return (
                 <div className="space-y-4 py-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -486,7 +544,7 @@ export default function OrdersPage() {
                     <div>
                       <span className="font-semibold">Table:</span>
                       <p className="mt-1">
-                        {order.table?.code || order.tableId}
+                        {currentTableInfo?.code || order.tableId}
                       </p>
                     </div>
                     <div>
@@ -538,7 +596,7 @@ export default function OrdersPage() {
                                       value={editingQuantity}
                                       onChange={e =>
                                         setEditingQuantity(
-                                          parseInt(e.target.value) || 1
+                                          parseInt(e.target.value) || 1,
                                         )
                                       }
                                       className="w-20"
@@ -549,7 +607,7 @@ export default function OrdersPage() {
                                         handleUpdateItemQuantity(
                                           order.id,
                                           item.id,
-                                          editingQuantity
+                                          editingQuantity,
                                         )
                                       }
                                     >
@@ -581,7 +639,7 @@ export default function OrdersPage() {
                                       onClick={() =>
                                         handleRemoveItemFromOrder(
                                           order.id,
-                                          item.id
+                                          item.id,
                                         )
                                       }
                                     >
@@ -640,7 +698,7 @@ export default function OrdersPage() {
                                 handleAddItemToOrder(
                                   order.id,
                                   newItemId,
-                                  newItemQty
+                                  newItemQty,
                                 );
                                 setNewItemId("");
                                 setNewItemQty(1);
@@ -657,10 +715,43 @@ export default function OrdersPage() {
                   </div>
 
                   <div className="border-t pt-4">
-                    <div className="flex justify-between items-center text-lg font-bold">
-                      <span>Total:</span>
-                      <span>{order.total.toLocaleString()}đ</span>
-                    </div>
+                    <h3 className="font-semibold mb-3">Chi tiết thanh toán</h3>
+                    {loadingTableInfo ? (
+                      <div className="text-center py-4 text-slate-500">
+                        Đang tải thông tin bàn...
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600 dark:text-slate-400">
+                            Tiền món ăn:
+                          </span>
+                          <span className="font-medium">
+                            {order.total.toLocaleString()}đ
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600 dark:text-slate-400">
+                            Tiền bàn:
+                          </span>
+                          <span className="font-medium">
+                            {calculateTableCost(
+                              currentTableInfo,
+                            ).toLocaleString()}
+                            đ
+                          </span>
+                        </div>
+                        <div className="border-t border-slate-200 dark:border-slate-700 pt-2 mt-2 flex justify-between items-center text-lg font-bold">
+                          <span>Tổng cộng:</span>
+                          <span className="text-blue-600">
+                            {(
+                              order.total + calculateTableCost(currentTableInfo)
+                            ).toLocaleString()}
+                            đ
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
